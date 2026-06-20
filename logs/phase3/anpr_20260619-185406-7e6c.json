@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-06-19T13:24:43.439287+00:00",
+  "phase": "phase3",
+  "module": "anpr",
+  "run_id": "20260619-185406-7e6c",
+  "dataset": "Indian-LP sirishan (GT plate box+text)",
+  "engine": "easyocr",
+  "samples": 300,
+  "plate_exact_match_acc": 0.4833,
+  "plate_exact_match_acc_raw": 0.3833,
+  "CER": 0.2278,
+  "1-NED": 0.7715,
+  "indian_format_valid_rate": 0.6333,
+  "improvements": "multi-line merge + syntax-aware correction (no fine-tune)",
+  "examples": [
+    {
+      "gt": "KA19TR02",
+      "raw": "KA197R02120102011",
+      "pred": "KA197R02120102011",
+      "edit": 10
+    },
+    {
+      "gt": "TN21AT0492",
+      "raw": "0I21AT0492",
+      "pred": "OI21AT0492",
+      "edit": 2
+    },
+    {
+      "gt": "RJ27TC0530",
+      "raw": "RZ7TC0530",
+      "pred": "RZ77C0530",
+      "edit": 3
+    },
+    {
+      "gt": "MH20CS9817",
+      "raw": "MH2OCS9817",
+      "pred": "MH20CS9817",
+      "edit": 0
+    },
+    {
+      "gt": "KL05AK3300",
+      "raw": "KLO5AK3300",
+      "pred": "KL05AK3300",
+      "edit": 0
+    },
+    {
+      "gt": "MP09CP9052",
+      "raw": "MPO9CP9052",
+      "pred": "MP09CP9052",
+      "edit": 0
+    },
+    {
+      "gt": "TN43J0158",
+      "raw": "JO158TNZ3",
+      "pred": "JO158TNZ3",
+      "edit": 9
+    },
+    {
+      "gt": "KA18P2987",
+      "raw": "KA18P2987",
+      "pred": "KA18P2987",
+      "edit": 0
+    },
+    {
+      "gt": "MH12JC2813",
+      "raw": "MH12JC2813",
+      "pred": "MH12JC2813",
+      "edit": 0
+    },
+    {
+      "gt": "MH14DT8831",
+      "raw": "MH14DT8831",
+      "pred": "MH14DT8831",
+      "edit": 0
+    }
+  ],
+  "note": "OCR scored on GT plate crops (isolates OCR from plate-detection, which is a separate fine-tune step — zero-shot has no plate class). EasyOCR is the design's named backup OCR; PP-OCRv5 is the intended primary (not installable here)."
+}

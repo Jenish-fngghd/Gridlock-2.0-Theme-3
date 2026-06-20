@@ -1,0 +1,110 @@
+{
+  "timestamp": "2026-06-19T19:28:33.080284+00:00",
+  "phase": "phase6",
+  "module": "helmet_zeroshot",
+  "run_id": "20260620-005805-e8f1",
+  "type": "QUALITATIVE capability test (no helmet GT in IDD — NOT a benchmark metric)",
+  "helmet_model": "leeyunjai/yolo11-helmet (helmet-11s) — PPE-domain, cross-domain transfer",
+  "stage1_detector": "RF-DETR-nano (motorcycle+person)",
+  "frames_with_motorcycles_examined": 50,
+  "motorcycles_found": 70,
+  "head_detections": 29,
+  "helmet_heads": 1,
+  "no_helmet_heads": 28,
+  "helmet_rate": 0.034,
+  "annotated_saved": 18,
+  "output_dir": "C:\\Users\\sorat\\Downloads\\Gridlock 2.0\\Gridlock 2.0_R2\\results\\helmet_zeroshot",
+  "examples": [
+    {
+      "image": "0001260.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 1
+    },
+    {
+      "image": "000126_r.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 1
+    },
+    {
+      "image": "000180_r.jpg",
+      "motos": 2,
+      "helmet": 1,
+      "no_helmet": 0
+    },
+    {
+      "image": "0002100.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 1
+    },
+    {
+      "image": "000210_r.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 1
+    },
+    {
+      "image": "000474_r.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 1
+    },
+    {
+      "image": "0004860.jpg",
+      "motos": 3,
+      "helmet": 0,
+      "no_helmet": 1
+    },
+    {
+      "image": "000492_r.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 2
+    },
+    {
+      "image": "0004980.jpg",
+      "motos": 2,
+      "helmet": 0,
+      "no_helmet": 2
+    },
+    {
+      "image": "000498_r.jpg",
+      "motos": 2,
+      "helmet": 0,
+      "no_helmet": 2
+    },
+    {
+      "image": "0005040.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 2
+    },
+    {
+      "image": "000504_r.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 2
+    },
+    {
+      "image": "0005100.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 3
+    },
+    {
+      "image": "000510_r.jpg",
+      "motos": 1,
+      "helmet": 0,
+      "no_helmet": 1
+    },
+    {
+      "image": "0005160.jpg",
+      "motos": 2,
+      "helmet": 0,
+      "no_helmet": 2
+    }
+  ],
+  "note": "Counts show the model DOES fire on motorcyclist heads cross-domain. Without GT we cannot score accuracy — inspect annotated frames in output_dir to judge quality. For a real metric, fine-tune on AICC/motorcycle-helmet data (Tier 1)."
+}

@@ -1,0 +1,24 @@
+# Gridlock 2.0 R2 - dependencies for src/pipeline.py
+# The pipeline degrades gracefully: install what you can; missing pieces are stubbed.
+# Minimal CPU first run:  pip install numpy opencv-python ultralytics paddleocr paddlepaddle
+
+# --- Core (required) ---
+numpy>=1.24
+opencv-python>=4.8
+
+# --- Detection / models ---
+rfdetr>=1.0                 # RF-DETR primary detector (Apache-2.0)
+ultralytics>=8.1            # YOLOv8 fallback + keremberke HF helmet/plate models (AGPL-3.0: research/demo only)
+huggingface_hub>=0.23
+torch>=2.0                  # backbone for the above (CUDA build recommended)
+
+# --- OCR (ANPR) ---
+paddleocr>=2.7              # primary OCR (Apache-2.0).  NOTE: PaddleOCR 3.x changed its API;
+                            # if on 3.x and OCR misbehaves, try:  pip install "paddleocr<3"
+paddlepaddle>=2.6          # PaddleOCR backend (GPU: paddlepaddle-gpu)
+easyocr>=1.7               # OCR fallback
+
+# --- Quality / metrics / utils ---
+pyiqa>=0.1.10              # no-reference IQA (BRISQUE/NIQE); OpenCV Laplacian fallback if absent
+pycocotools>=2.0.7         # COCO-format mAP (optional; custom mAP used if absent)
+supervision>=0.20          # optional: annotation helpers (not required)

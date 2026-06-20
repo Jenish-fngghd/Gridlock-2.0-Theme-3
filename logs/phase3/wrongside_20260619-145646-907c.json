@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-06-19T09:27:03.273900+00:00",
+  "phase": "phase3",
+  "module": "wrongside",
+  "run_id": "20260619-145646-907c",
+  "dataset": "Wrong-Way OBB (valid)",
+  "frames": 91,
+  "gt_vehicles": 768,
+  "gt_by_class": {
+    "right-side": 685,
+    "wrong-side": 83
+  },
+  "wrongside_verdict": "not_testable (geometry needs motion; single stills) → Tier 2",
+  "detector_recall_classagnostic@0.5": 0.6081,
+  "obb_angle_stats_deg": {
+    "min": 0.0,
+    "max": 90.0,
+    "mean": 88.2
+  },
+  "tier": "tier_2 (promote to learned classifier on this dataset if baseline < §7)",
+  "note": "Zero-shot wrong-side verdict is not computable from a still (rule engine abstains). Detector localizes vehicles at the recall above → solid base for the Phase-5 learned-classifier escalation. OBB angle kept as a heading proxy."
+}

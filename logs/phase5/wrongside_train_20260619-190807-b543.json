@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-06-19T13:38:36.668979+00:00",
+  "phase": "phase5",
+  "module": "wrongside_train",
+  "run_id": "20260619-190807-b543",
+  "model": "mobilenet_v3_small (pretrained=True)",
+  "version": "smoke",
+  "epochs": 1,
+  "device": "cpu",
+  "train_crops": 3467,
+  "class_counts": [
+    3050,
+    417
+  ],
+  "minutes": 0.22,
+  "best_val_wrongside_f1": 0.8444,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.3897,
+      "accuracy": 0.9635,
+      "wrongside_precision": 0.7835,
+      "wrongside_recall": 0.9157,
+      "wrongside_f1": 0.8444
+    }
+  ],
+  "checkpoint": "C:\\Users\\sorat\\Downloads\\Gridlock 2.0\\Gridlock 2.0_R2\\checkpoints\\wrongside\\smoke\\model.pt"
+}

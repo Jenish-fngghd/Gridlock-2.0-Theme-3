@@ -1,0 +1,28 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.venv-paddle/
+venv/
+env/
+.ipynb_checkpoints/
+
+# --- Datasets & outputs (large / generated; keep the placeholders) ---
+datasets/*
+!datasets/README.md
+outputs/*
+!outputs/.gitkeep
+
+# --- Model weights / caches ---
+*.pt
+*.onnx
+*.pdparams
+.cache/
+
+# --- OS / IDE / tooling ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/settings.local.json

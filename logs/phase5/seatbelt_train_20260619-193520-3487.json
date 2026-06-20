@@ -1,0 +1,142 @@
+{
+  "timestamp": "2026-06-19T14:07:56.996582+00:00",
+  "phase": "phase5",
+  "module": "seatbelt_train",
+  "run_id": "20260619-193520-3487",
+  "model": "mobilenet_v3_small (pretrained=True)",
+  "version": "v2",
+  "epochs": 14,
+  "device": "cpu",
+  "train_crops": 780,
+  "class_counts": {
+    "seatbelt": 469,
+    "no_seatbelt": 311
+  },
+  "mobile_out_of_scope": 349,
+  "minutes": 2.46,
+  "best_val_no_seatbelt_f1": 0.6776,
+  "val_metrics_last": {
+    "epoch": 14,
+    "train_loss": 0.0053,
+    "accuracy": 0.7633,
+    "wrongside_precision": 0.7404,
+    "wrongside_recall": 0.5923,
+    "wrongside_f1": 0.6581
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.7016,
+      "accuracy": 0.6124,
+      "wrongside_precision": 0.4444,
+      "wrongside_recall": 0.0308,
+      "wrongside_f1": 0.0576
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.5969,
+      "accuracy": 0.6183,
+      "wrongside_precision": 0.5152,
+      "wrongside_recall": 0.1308,
+      "wrongside_f1": 0.2086
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.5047,
+      "accuracy": 0.6568,
+      "wrongside_precision": 0.625,
+      "wrongside_recall": 0.2692,
+      "wrongside_f1": 0.3763
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.4176,
+      "accuracy": 0.6982,
+      "wrongside_precision": 0.6522,
+      "wrongside_recall": 0.4615,
+      "wrongside_f1": 0.5405
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.2927,
+      "accuracy": 0.7189,
+      "wrongside_precision": 0.6496,
+      "wrongside_recall": 0.5846,
+      "wrongside_f1": 0.6154
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.2048,
+      "accuracy": 0.7367,
+      "wrongside_precision": 0.6519,
+      "wrongside_recall": 0.6769,
+      "wrongside_f1": 0.6642
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.1316,
+      "accuracy": 0.7485,
+      "wrongside_precision": 0.6923,
+      "wrongside_recall": 0.6231,
+      "wrongside_f1": 0.6559
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.0754,
+      "accuracy": 0.7544,
+      "wrongside_precision": 0.7374,
+      "wrongside_recall": 0.5615,
+      "wrongside_f1": 0.6376
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.047,
+      "accuracy": 0.7426,
+      "wrongside_precision": 0.6903,
+      "wrongside_recall": 0.6,
+      "wrongside_f1": 0.642
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.0314,
+      "accuracy": 0.7456,
+      "wrongside_precision": 0.6642,
+      "wrongside_recall": 0.6846,
+      "wrongside_f1": 0.6742
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.0265,
+      "accuracy": 0.7544,
+      "wrongside_precision": 0.6911,
+      "wrongside_recall": 0.6538,
+      "wrongside_f1": 0.6719
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.0181,
+      "accuracy": 0.7544,
+      "wrongside_precision": 0.6975,
+      "wrongside_recall": 0.6385,
+      "wrongside_f1": 0.6667
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.0103,
+      "accuracy": 0.7663,
+      "wrongside_precision": 0.7217,
+      "wrongside_recall": 0.6385,
+      "wrongside_f1": 0.6776
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.0053,
+      "accuracy": 0.7633,
+      "wrongside_precision": 0.7404,
+      "wrongside_recall": 0.5923,
+      "wrongside_f1": 0.6581
+    }
+  ],
+  "checkpoint": "C:\\Users\\sorat\\Downloads\\Gridlock 2.0\\Gridlock 2.0_R2\\checkpoints\\seatbelt\\v2\\model.pt",
+  "note": "metrics use positive=no_seatbelt (the violation). Label = windshield WITHOUT an annotated belt inside. 'mobile' counted but out-of-scope (not a mandated violation)."
+}

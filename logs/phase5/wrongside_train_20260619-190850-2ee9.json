@@ -1,0 +1,140 @@
+{
+  "timestamp": "2026-06-19T13:42:48.578876+00:00",
+  "phase": "phase5",
+  "module": "wrongside_train",
+  "run_id": "20260619-190850-2ee9",
+  "model": "mobilenet_v3_small (pretrained=True)",
+  "version": "v1",
+  "epochs": 15,
+  "device": "cpu",
+  "train_crops": 3467,
+  "class_counts": [
+    3050,
+    417
+  ],
+  "minutes": 3.77,
+  "best_val_wrongside_f1": 0.988,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.3912,
+      "accuracy": 0.9609,
+      "wrongside_precision": 0.7789,
+      "wrongside_recall": 0.8916,
+      "wrongside_f1": 0.8315
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.1182,
+      "accuracy": 0.9857,
+      "wrongside_precision": 0.95,
+      "wrongside_recall": 0.9157,
+      "wrongside_f1": 0.9325
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.0526,
+      "accuracy": 0.9883,
+      "wrongside_precision": 0.9405,
+      "wrongside_recall": 0.9518,
+      "wrongside_f1": 0.9461
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.0255,
+      "accuracy": 0.9909,
+      "wrongside_precision": 0.9634,
+      "wrongside_recall": 0.9518,
+      "wrongside_f1": 0.9576
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.015,
+      "accuracy": 0.9857,
+      "wrongside_precision": 0.9186,
+      "wrongside_recall": 0.9518,
+      "wrongside_f1": 0.9349
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.0127,
+      "accuracy": 0.9935,
+      "wrongside_precision": 0.9643,
+      "wrongside_recall": 0.9759,
+      "wrongside_f1": 0.9701
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.0156,
+      "accuracy": 0.9948,
+      "wrongside_precision": 0.9877,
+      "wrongside_recall": 0.9639,
+      "wrongside_f1": 0.9756
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.0107,
+      "accuracy": 0.9948,
+      "wrongside_precision": 0.9759,
+      "wrongside_recall": 0.9759,
+      "wrongside_f1": 0.9759
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.0061,
+      "accuracy": 0.9961,
+      "wrongside_precision": 0.9878,
+      "wrongside_recall": 0.9759,
+      "wrongside_f1": 0.9818
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.0046,
+      "accuracy": 0.9896,
+      "wrongside_precision": 0.9213,
+      "wrongside_recall": 0.988,
+      "wrongside_f1": 0.9535
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.0054,
+      "accuracy": 0.9948,
+      "wrongside_precision": 0.9647,
+      "wrongside_recall": 0.988,
+      "wrongside_f1": 0.9762
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.0035,
+      "accuracy": 0.9961,
+      "wrongside_precision": 0.9762,
+      "wrongside_recall": 0.988,
+      "wrongside_f1": 0.982
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.0048,
+      "accuracy": 0.9974,
+      "wrongside_precision": 0.988,
+      "wrongside_recall": 0.988,
+      "wrongside_f1": 0.988
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.0019,
+      "accuracy": 0.9961,
+      "wrongside_precision": 0.9762,
+      "wrongside_recall": 0.988,
+      "wrongside_f1": 0.982
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.0027,
+      "accuracy": 0.9961,
+      "wrongside_precision": 0.9762,
+      "wrongside_recall": 0.988,
+      "wrongside_f1": 0.982
+    }
+  ],
+  "checkpoint": "C:\\Users\\sorat\\Downloads\\Gridlock 2.0\\Gridlock 2.0_R2\\checkpoints\\wrongside\\v1\\model.pt"
+}
