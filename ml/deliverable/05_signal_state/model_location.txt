@@ -1,0 +1,11 @@
+Stage 1: RF-DETR-nano (COCO pretrained, no local checkpoint)
+  Class: traffic light (COCO class 9)
+  Conf threshold: 0.15
+
+Stage 2: SignalStateClassifier — HSV rule-based, NO model weights
+  Implementation: src/modules/signal_state.py
+  No checkpoint needed — pure algorithm.
+
+Usage:
+  from src.modules.signal_state import SignalStateModule
+  module = SignalStateModule(conf=0.15)

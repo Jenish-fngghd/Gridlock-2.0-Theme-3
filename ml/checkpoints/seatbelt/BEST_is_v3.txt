@@ -1,0 +1,10 @@
+v3 is the canonical seatbelt checkpoint (MobileNetV3-large, 224px, 80ep, val acc 0.855, no_seatbelt F1 0.8016).
+End-to-end §3.5 two-stage: F1=0.7866, P=0.8545, R=0.7287 (beats GT-crop baseline 0.678).
+
+History:
+  v1  = MobileNetV3-small, 128px, 12ep → F1=0.6347
+  v2  = MobileNetV3-small, 224px, 14ep → F1=0.6776 (old canonical)
+  v2b = MobileNetV3-small, 224px, 20ep → F1=0.7124
+  v3  = MobileNetV3-large, 224px, 80ep → F1=0.8016 ← CURRENT BEST
+
+Next: v4 = MobileNetV3-large, 224px, 120ep, cosine LR → target F1 ≥ 0.82

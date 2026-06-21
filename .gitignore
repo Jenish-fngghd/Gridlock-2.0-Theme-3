@@ -4,21 +4,23 @@ __pycache__/
 *.egg-info/
 .venv/
 .venv-paddle/
+.venv-web/
 venv/
 env/
 .ipynb_checkpoints/
 
 # --- Datasets & outputs (large / generated; keep the placeholders) ---
-datasets/*
-!datasets/README.md
-outputs/*
-!outputs/.gitkeep
+ml/datasets/*
+!ml/datasets/README.md
+ml/outputs/*
+!ml/outputs/.gitkeep
 
 # --- Model weights / caches ---
 *.pt
 *.onnx
 *.pdparams
 .cache/
+.agents
 
 # --- OS / IDE / tooling ---
 .DS_Store
@@ -26,3 +28,19 @@ Thumbs.db
 .vscode/
 .idea/
 .claude/settings.local.json
+
+# --- Web app (backend / frontend / inference) ---
+node_modules/
+.next/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.local
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+
+# Model weights
+*.safetensors

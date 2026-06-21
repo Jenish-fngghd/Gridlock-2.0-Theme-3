@@ -1,0 +1,8 @@
+Model: RF-DETR-large (COCO pretrained)  ← BEST VARIANT
+No local checkpoint — loaded at runtime from rfdetr library.
+Library: rfdetr>=1.8.0 (Apache-2.0)
+Usage: from rfdetr import RFDETRLarge; model = RFDETRLarge()
+
+Note: Fine-tune ruled out (IDD ~46k images; dataset too large for in-scope run).
+Zero-shot mAP@0.5=0.5216 on 5000 IDD val images is the canonical best result (run 20260621-040331-ca91).
+RF-DETR-nano baseline: mAP@0.5=0.4803 on 1000 imgs (run 20260620-184314-6b0f).

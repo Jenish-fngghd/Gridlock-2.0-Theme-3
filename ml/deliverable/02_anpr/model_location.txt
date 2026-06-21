@@ -1,0 +1,20 @@
+Model: TrOCR-base-printed, fine-tuned on Indian-LP
+Checkpoint path: checkpoints/anpr/trocr_ft/
+
+Files in checkpoint:
+  model.safetensors       — fine-tuned weights (~400MB)
+  config.json             — VisionEncoderDecoder config
+  generation_config.json  — decoding parameters
+  processor_config.json   — ViTImageProcessor config
+  tokenizer.json          — byte-level BPE tokenizer
+  tokenizer_config.json   — tokenizer metadata
+  training_args.bin       — HuggingFace TrainingArguments snapshot
+
+Loading:
+  from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+  proc  = TrOCRProcessor.from_pretrained("checkpoints/anpr/trocr_ft")
+  model = VisionEncoderDecoderModel.from_pretrained("checkpoints/anpr/trocr_ft")
+
+Or via ANPRModule:
+  from src.modules.anpr import ANPRModule
+  anpr = ANPRModule(ocr_engine="trocr_ft", preprocess=True, upscale=4)

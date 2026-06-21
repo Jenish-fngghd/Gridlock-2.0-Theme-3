@@ -1,0 +1,190 @@
+{
+  "timestamp": "2026-06-20T17:05:12.262953+00:00",
+  "phase": "phase5",
+  "module": "seatbelt_train",
+  "run_id": "20260620-170449-6a93",
+  "model": "mobilenet_v3_large (pretrained=True)",
+  "version": "v3",
+  "epochs": 20,
+  "device": "cuda",
+  "train_crops": 780,
+  "class_counts": {
+    "seatbelt": 469,
+    "no_seatbelt": 311
+  },
+  "mobile_out_of_scope": 349,
+  "minutes": 0.23,
+  "best_val_no_seatbelt_f1": 0.7373,
+  "val_metrics_last": {
+    "epoch": 20,
+    "train_loss": 0.0012,
+    "accuracy": 0.8136,
+    "wrongside_precision": 0.8384,
+    "wrongside_recall": 0.6385,
+    "wrongside_f1": 0.7249
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.6701,
+      "accuracy": 0.6213,
+      "wrongside_precision": 0.5263,
+      "wrongside_recall": 0.1538,
+      "wrongside_f1": 0.2381
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.4791,
+      "accuracy": 0.6538,
+      "wrongside_precision": 0.7407,
+      "wrongside_recall": 0.1538,
+      "wrongside_f1": 0.2548
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.3114,
+      "accuracy": 0.7337,
+      "wrongside_precision": 0.8846,
+      "wrongside_recall": 0.3538,
+      "wrongside_f1": 0.5055
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.1823,
+      "accuracy": 0.7485,
+      "wrongside_precision": 0.8571,
+      "wrongside_recall": 0.4154,
+      "wrongside_f1": 0.5596
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.0823,
+      "accuracy": 0.7663,
+      "wrongside_precision": 0.8592,
+      "wrongside_recall": 0.4692,
+      "wrongside_f1": 0.607
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.032,
+      "accuracy": 0.7751,
+      "wrongside_precision": 0.8553,
+      "wrongside_recall": 0.5,
+      "wrongside_f1": 0.6311
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.0195,
+      "accuracy": 0.784,
+      "wrongside_precision": 0.8519,
+      "wrongside_recall": 0.5308,
+      "wrongside_f1": 0.654
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.0197,
+      "accuracy": 0.7751,
+      "wrongside_precision": 0.814,
+      "wrongside_recall": 0.5385,
+      "wrongside_f1": 0.6481
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.0116,
+      "accuracy": 0.8166,
+      "wrongside_precision": 0.8333,
+      "wrongside_recall": 0.6538,
+      "wrongside_f1": 0.7328
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.0047,
+      "accuracy": 0.7899,
+      "wrongside_precision": 0.8242,
+      "wrongside_recall": 0.5769,
+      "wrongside_f1": 0.6787
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.0031,
+      "accuracy": 0.8077,
+      "wrongside_precision": 0.8351,
+      "wrongside_recall": 0.6231,
+      "wrongside_f1": 0.7137
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.0024,
+      "accuracy": 0.8018,
+      "wrongside_precision": 0.8316,
+      "wrongside_recall": 0.6077,
+      "wrongside_f1": 0.7022
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.0046,
+      "accuracy": 0.8018,
+      "wrongside_precision": 0.8462,
+      "wrongside_recall": 0.5923,
+      "wrongside_f1": 0.6968
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.0015,
+      "accuracy": 0.8136,
+      "wrongside_precision": 0.8602,
+      "wrongside_recall": 0.6154,
+      "wrongside_f1": 0.7175
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.0009,
+      "accuracy": 0.8047,
+      "wrongside_precision": 0.8478,
+      "wrongside_recall": 0.6,
+      "wrongside_f1": 0.7027
+    },
+    {
+      "epoch": 16,
+      "train_loss": 0.0019,
+      "accuracy": 0.8166,
+      "wrongside_precision": 0.8542,
+      "wrongside_recall": 0.6308,
+      "wrongside_f1": 0.7257
+    },
+    {
+      "epoch": 17,
+      "train_loss": 0.001,
+      "accuracy": 0.8136,
+      "wrongside_precision": 0.8526,
+      "wrongside_recall": 0.6231,
+      "wrongside_f1": 0.72
+    },
+    {
+      "epoch": 18,
+      "train_loss": 0.0012,
+      "accuracy": 0.784,
+      "wrongside_precision": 0.8904,
+      "wrongside_recall": 0.5,
+      "wrongside_f1": 0.6404
+    },
+    {
+      "epoch": 19,
+      "train_loss": 0.0028,
+      "accuracy": 0.8166,
+      "wrongside_precision": 0.8208,
+      "wrongside_recall": 0.6692,
+      "wrongside_f1": 0.7373
+    },
+    {
+      "epoch": 20,
+      "train_loss": 0.0012,
+      "accuracy": 0.8136,
+      "wrongside_precision": 0.8384,
+      "wrongside_recall": 0.6385,
+      "wrongside_f1": 0.7249
+    }
+  ],
+  "checkpoint": "/teamspace/studios/this_studio/checkpoints/seatbelt/v3/model.pt",
+  "note": "metrics use positive=no_seatbelt (the violation). Label = windshield WITHOUT an annotated belt inside. 'mobile' counted but out-of-scope (not a mandated violation)."
+}

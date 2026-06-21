@@ -1,0 +1,22 @@
+timestamp,run_id,phase,module,dataset,model,metric,value,target,pass_fail,note
+2026-06-20T17:03:51.789797+00:00,20260620-165700-d53a,phase5,windshield_detector,seatbelt-OBB(windshield-only),yolo11n-ft,mAP50,0.995,Stage-1 of §3.5 two-stage,finetuned,80ep 6.69min
+2026-06-20T17:03:58.832790+00:00,20260620-170338-57e5,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3s-ft,no_seatbelt_f1,0.7124,from not_testable,finetuned,acc=0.7396 20ep 0.19min
+2026-06-20T17:05:12.263655+00:00,20260620-170449-6a93,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3l-ft,no_seatbelt_f1,0.7373,from not_testable,finetuned,acc=0.8136 20ep 0.23min
+2026-06-20T17:06:19.907639+00:00,20260620-170617-7bfe,phase5,seatbelt_zeroshot,sample-violation-images(seatbelt),"MobileNetV3-small(v2,no-stage1)",hit_rate_proxy,0.0,qualitative (capability signal),zeroshot,no_stage1_crop hits=0/10
+2026-06-20T17:06:38.655080+00:00,20260620-170535-bad2,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3l-ft,no_seatbelt_f1,0.8016,from not_testable,finetuned,acc=0.8343 80ep 0.91min
+2026-06-20T17:06:55.540975+00:00,20260620-170653-1648,phase5,seatbelt_zeroshot,sample-violation-images(seatbelt),"MobileNetV3-small(v2,no-stage1)",hit_rate_proxy,0.0,qualitative (capability signal),zeroshot,no_stage1_crop hits=0/10
+2026-06-20T17:09:50.587484+00:00,20260620-170937-5f73,phase5,seatbelt_e2e,seatbelt-OBB(valid),yolo11n+mobilenet_v3_large,f1,0.7866,beat/match GT-crop F1=0.678,finetuned,acc=0.8487 matched=337
+2026-06-20T17:10:47.616203+00:00,20260620-171036-fe73,phase5,seatbelt_e2e,seatbelt-OBB(valid),yolo11n+mobilenet_v3_small,f1,0.6711,beat/match GT-crop F1=0.678,finetuned,acc=0.7062 matched=337
+2026-06-20T17:11:36.518481+00:00,20260620-171125-0121,phase5,helmet_triple_zeroshot,sample-violation-images,RF-DETR-nano(COCO),hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,helmet_hit=1.0 triple_hit=1.0 triple_triggered=2 helmet_state=not_testable
+2026-06-20T17:18:36.690022+00:00,20260620-171831-eb8a,phase5,helmet_triple_zeroshot,sample-violation-images,RF-DETR-nano(COCO),hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,helmet_hit=1.0 triple_hit=1.0 triple_triggered=3 helmet_state=not_testable
+2026-06-20T17:19:38.599943+00:00,20260620-171934-af36,phase5,signal_zeroshot,sample-violation-images(redlight),HSV+RF-DETR,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,red_hits=7/7
+2026-06-20T17:20:30.917950+00:00,20260620-172028-e4bd,phase5,signal_zeroshot,sample-violation-images(redlight),HSV+RF-DETR,hit_rate_proxy,0.857,qualitative (capability signal),zeroshot,red_hits=6/7
+2026-06-20T17:35:49.454428+00:00,20260620-173542-344e,phase5,helmet_triple_zeroshot,sample-violation-images,RF-DETR-nano(COCO)@1280px,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,helmet_hit=1.0 triple_hit=1.0 triple_triggered=4 helmet_state=not_testable
+2026-06-20T17:36:22.760475+00:00,20260620-173618-b1f8,phase5,signal_zeroshot,sample-violation-images(redlight),HSV+RF-DETR,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,red_hits=7/7
+2026-06-20T17:36:24.897248+00:00,20260620-173457-a3f3,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3l-ft,no_seatbelt_f1,0.8048,from not_testable,finetuned,acc=0.8432 120ep 1.33min
+2026-06-20T17:37:15.378106+00:00,20260620-173710-a747,phase5,helmet_triple_zeroshot,sample-violation-images,RF-DETR-nano(COCO)@1280px,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,helmet_hit=1.0 triple_hit=1.0 triple_triggered=2 helmet_state=not_testable
+2026-06-20T17:37:27.080669+00:00,20260620-173724-f13e,phase5,signal_zeroshot,sample-violation-images(redlight),HSV+RF-DETR,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,red_hits=7/7
+2026-06-20T17:39:04.815719+00:00,20260620-173851-18d0,phase5,seatbelt_e2e,seatbelt-OBB(valid),yolo11n+mobilenet_v3_large,f1,0.8082,beat/match GT-crop F1=0.678,finetuned,acc=0.8605 matched=337
+2026-06-20T18:41:01.355746+00:00,20260620-182128-f7a2,phase5,anpr,Indian-LP,trocr-base-printed-ft,val_exact_acc,0.7811,beat 0.449 baseline,finetuned,TrOCR-base ft 30ep CER=0.0481 N=1692
+2026-06-20T19:46:34.067871+00:00,20260620-192410-c183,phase5,anpr,Indian-LP,trocr-base-printed-ft,val_exact_acc,0.7041,beat 0.449 baseline,finetuned,TrOCR-base ft 30ep CER=0.0615 N=1692
+2026-06-20T20:07:28.439662+00:00,20260620-194719-7bca,phase5,anpr,Indian-LP,trocr-base-printed-ft,val_exact_acc,0.7456,beat 0.449 baseline,finetuned,TrOCR-base ft 30ep CER=0.0462 N=1692

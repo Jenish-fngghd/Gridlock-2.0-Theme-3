@@ -1,0 +1,28 @@
+{
+  "module": "anpr",
+  "model": "microsoft/trocr-base-printed (fine-tuned)",
+  "results": {
+    "val_exact_acc": 0.7811,
+    "baseline_exact_acc": 0.449,
+    "best_val_CER_at_checkpoint192": 0.0811,
+    "val_CER": 0.0481,
+    "improvement_over_baseline": "+0.332 exact acc",
+    "best_val_exact_acc_at_checkpoint192": 0.6923
+  },
+  "checkpoint_saved": "checkpoints/anpr/trocr_ft/",
+  "training": {
+    "train_pairs": 1567,
+    "preprocessing": "4x bicubic upscale + CLAHE + sharpen + auto-invert",
+    "epochs_run": 7,
+    "best_epoch": 2,
+    "fp16": true,
+    "optimizer": "AdamW",
+    "dataset": "Indian-LP sirishan (1741 images, GT plate box + text)",
+    "learning_rate": 5E-05,
+    "best_checkpoint_step": 192,
+    "early_stopping_patience": 5,
+    "lr_scheduler": "cosine",
+    "batch_size": 8,
+    "val_pairs": 174
+  }
+}

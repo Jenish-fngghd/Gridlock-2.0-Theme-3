@@ -1,0 +1,7 @@
+{
+  "timestamp": "2026-06-20T16:00:12.026139+00:00",
+  "phase": "phase3",
+  "module": "signal_state",
+  "run_id": "20260620-213006-df70",
+  "error": "opencv unavailable: \n\nIMPORTANT: PLEASE READ THIS FOR ADVICE ON HOW TO SOLVE THIS ISSUE!\n\nImporting the numpy C-extensions failed. This error can happen for\nmany reasons, often due to issues with your setup or how NumPy was\ninstalled.\n\nWe have compiled some common reasons and troubleshooting tips at:\n\n    https://numpy.org/devdocs/user/troubleshooting-importerror.html\n\nPlease note and check the following:\n\n  * The Python version is: Python 3.14 from \"C:\\Python314\\python.exe\"\n  * The NumPy version is: \"2.4.3\"\n\nand make sure that they are the versions you expect.\n\nPlease carefully study the information and documentation linked above.\nThis is unlikely to be a NumPy issue but will be caused by a bad install\nor environment on your machine.\n\nOriginal error was: DLL load failed while importing _multiarray_umath: The paging file is too small for this operation to complete.\n"
+}

@@ -1,0 +1,14 @@
+Model: MobileNetV3-small, fine-tuned
+Checkpoint: checkpoints/wrongside/v1/model.pt
+
+Load:
+  import torch
+  from torchvision import models
+  model = models.mobilenet_v3_small(weights=None)
+  model.classifier[-1] = torch.nn.Linear(model.classifier[-1].in_features, 2)
+  model.load_state_dict(torch.load("checkpoints/wrongside/v1/model.pt", map_location="cpu"))
+  model.eval()
+
+Or via module:
+  from src.modules.wrongside import WrongSideModule
+  module = WrongSideModule(weights="checkpoints/wrongside/v1/model.pt")
