@@ -367,6 +367,34 @@ class ANPRModule:
     def plate_detection_available(self) -> bool:
         return False
 
+    # ── Plate localization (SAM-3, ROI-gated to violators) ─────────────────
+
+    @staticmethod
+    def locate_plate_sam3(vehicle_crop, sam3, threshold: float = 0.3) -> dict | None:
+        """Find a license-plate box within a vehicle crop using SAM-3 open-vocab detection.
+
+        RF-DETR/COCO has no plate class, so this fills exactly that gap — called ONLY on
+        confirmed/candidate violators' vehicle crops (§4c ROI-gated ANPR: never OCR every car).
+        Returns {bbox, confidence} in the vehicle_crop's own pixel coordinates, or None if no
+        plate found / SAM-3 unavailable.
+        """
+        if sam3 is None:
+            return None
+        try:
+            res = sam3.detect_concept(vehicle_crop, "license plate", threshold=threshold)
+            if res.model_unavailable or not res.detections:
+                return None
+            best = max(res.detections, key=lambda d: d.confidence)
+            return {"bbox": [round(v, 1) for v in best.xyxy], "confidence": round(best.confidence, 3)}
+        except Exception:  # noqa: BLE001
+            return None
+
+    @staticmethod
+    def crop_from_bbox(vehicle_crop, bbox):
+        x1, y1, x2, y2 = [int(round(v)) for v in bbox]
+        x1, y1 = max(0, x1), max(0, y1)
+        return vehicle_crop[y1:y2, x1:x2]
+
     # ── Public API ────────────────────────────────────────────────────────
 
     def recognize(self, plate_crop) -> dict:
