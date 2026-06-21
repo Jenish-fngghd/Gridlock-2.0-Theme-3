@@ -1,0 +1,106 @@
+{
+  "timestamp": "2026-06-20T17:20:30.917349+00:00",
+  "phase": "phase5",
+  "module": "signal_zeroshot",
+  "run_id": "20260620-172028-e4bd",
+  "classifier": "SignalStateClassifier (HSV Tier-0, §3.6 documented zero-shot approach)",
+  "stage1_detector": "RF-DETR-nano (COCO class=traffic light, Apache-2.0)",
+  "dataset": "sample images of violations/Red light/ (all known red-light violations)",
+  "total_images": 7,
+  "images_with_red_classified": 6,
+  "hit_rate": 0.857,
+  "per_image": [
+    {
+      "image": "039_frame.jpg",
+      "traffic_lights_detected": 0,
+      "states": [],
+      "red_classified": false,
+      "hit": false
+    },
+    {
+      "image": "071_frame.jpg",
+      "traffic_lights_detected": 6,
+      "states": [
+        "red",
+        "unknown",
+        "red",
+        "red",
+        "unknown",
+        "unknown"
+      ],
+      "red_classified": true,
+      "hit": true
+    },
+    {
+      "image": "dayClip1--02102.jpg",
+      "traffic_lights_detected": 13,
+      "states": [
+        "red",
+        "red",
+        "red",
+        "green",
+        "green",
+        "unknown",
+        "green",
+        "green",
+        "red",
+        "red",
+        "green",
+        "green",
+        "green"
+      ],
+      "red_classified": true,
+      "hit": true
+    },
+    {
+      "image": "dayClip7--00564.jpg",
+      "traffic_lights_detected": 4,
+      "states": [
+        "red",
+        "red",
+        "red",
+        "red"
+      ],
+      "red_classified": true,
+      "hit": true
+    },
+    {
+      "image": "dayClip7--00638.jpg",
+      "traffic_lights_detected": 4,
+      "states": [
+        "red",
+        "red",
+        "red",
+        "red"
+      ],
+      "red_classified": true,
+      "hit": true
+    },
+    {
+      "image": "dayClip8--00005.jpg",
+      "traffic_lights_detected": 6,
+      "states": [
+        "unknown",
+        "red",
+        "red",
+        "red",
+        "unknown",
+        "unknown"
+      ],
+      "red_classified": true,
+      "hit": true
+    },
+    {
+      "image": "dayClip9--00373.jpg",
+      "traffic_lights_detected": 3,
+      "states": [
+        "red",
+        "red",
+        "unknown"
+      ],
+      "red_classified": true,
+      "hit": true
+    }
+  ],
+  "note": "Hit = traffic-light detected AND HSV classifier returns 'red'. Capability signal only — no per-image GT boxes. Full LISA benchmark is in eval_signal.py."
+}
