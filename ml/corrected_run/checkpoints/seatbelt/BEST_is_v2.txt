@@ -1,1 +1,0 @@
-v2 is the canonical seatbelt checkpoint (val acc 0.766, no_seatbelt F1 0.678). v1=128px baseline (0.635), v3=frozen-backbone regression (0.619).
