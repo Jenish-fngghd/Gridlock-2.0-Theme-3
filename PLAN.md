@@ -235,8 +235,18 @@ Reads for the feed/search/detail pages go **direct to Supabase** from the fronte
 - [x] Smoke-tested in mock mode (`.venv-web`) — health + process + determinism pass
 - [x] **Live end-to-end verified** against Supabase: process→storage+job+detections+plate+violation+audit,
       review (status flip + chained audit CHAIN OK), analytics aggregates. Keys in gitignored `.env`.
-- [ ] Wire `real` inference on the GPU box (wrap `ml/src/modules/pipeline.py`)
-- [ ] Dockerfile + local docker-compose
+- [x] **Wired `real` inference** — rewrote `ml/src/pipeline.py` orchestrator: every violation
+      module now calls an actual trained classifier/decision (was previously detect-only stubs
+      for seatbelt/helmet). Added confidence-cascade VLM escalation (NVIDIA NIM,
+      `human_review`-band only) and SAM-3 plumbing (helmet-state crops, plate localization) —
+      SAM-3 itself segfaults locally on Windows (root-caused to the official package's text
+      encoder construction; works on Colab per the user's own test) — deferred to AWS
+      verification, code path is complete and degrades gracefully if unavailable. See
+      `ml/TODO.md` Phase 8 for full detail.
+      **Verified end-to-end through the real FastAPI backend**: upload → real RF-DETR + real
+      wrong-side classifier + VLM verification → persisted to Supabase (job/detections/
+      violations/signed evidence image) → confirmed via direct DB query → cleaned up.
+- [ ] Dockerfile + local docker-compose (combined web+ML deps into one image for AWS)
 
 ### Phase D — Frontend (Next.js 16 + Tailwind v4 + motion)
 - [x] Scaffold app, supabase-js client (anon), Tailwind; deps: motion, recharts

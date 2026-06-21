@@ -102,6 +102,73 @@
 - **GPU = 4 GB hard limit:** RF-DETR-nano fine-tune fits (small batch); LocateAnything-3B (~12 GB) does NOT fit → Track B big-VLM here will OOM unless quantized.
 - **venv/PATH leak:** bare `python` is unreliable → **always call the explicit interpreter path**.
 
+## Phase 8 — Real Inference Pipeline (web platform: detect-only -> classify-and-decide)
+**Problem identified:** the orchestrator (`src/pipeline.py`) and `seatbelt.py`/`helmet_triple.py` were
+stale Phase-0/3 zero-shot stubs — they never picked up the real fine-tuned checkpoints that already
+existed in `checkpoints/` (seatbelt, wrongside) or the validated SAM-3 helmet check. Detection alone
+isn't a violation verdict; this phase wires every module to an actual classifier/decision and adds
+the confidence-cascade VLM escalation the master design always specified but never implemented.
+
+- [x] **`wrongside.py` (NEW)** — wires the trained MobileNetV3-small classifier
+      (`checkpoints/wrongside/v1/model.pt`) onto a single vehicle crop (no motion needed — the
+      classifier learned heading from appearance, no h-flip aug). Tested on a real Wrong-Way image:
+      correct call, conf 0.94.
+- [x] **`seatbelt.py` (rewritten)** — real two-stage: YOLOv11n windshield detector
+      (`checkpoints/windshield/v1/`) -> MobileNetV3-large belt classifier (`checkpoints/seatbelt/v4/`).
+      Tested on a real seat-belt dataset image: correct windshield + belt-state call.
+- [x] **`redlight.py` (NEW)** — LSTM trajectory classifier (`checkpoints/redlight/v1/`) for
+      video/clip mode (needs a multi-frame trajectory; not usable on a single still). Tested on a
+      synthetic moving trajectory: correct.
+- [x] **`vlm_verify.py` (NEW)** — confidence-cascade VLM verifier (§6 of the master design, never
+      built before). Provider: **NVIDIA NIM** (`meta/llama-3.2-11b-vision-instruct`, build.nvidia.com),
+      OpenAI-compatible chat-completions with proper multimodal `content: [{type:image_url}]` format
+      (an `<img>` HTML-tag-in-string hack was tried first and silently failed to ground the model —
+      fixed). Called ONLY on `human_review`-band violations (rare, not every image) — keeps cost low.
+      Tested live: correctly grounded answers with real captions.
+- [x] **SAM-3 — code complete, client/worker built, NOT verified locally (Windows).** Investigated why
+      the existing `sam3_detector.py` (which used `transformers.Sam3Model`) was never actually working:
+      it **segfaults** even on CPU — the HF Hub `facebook/sam3` repo's `config.json` declares
+      `Sam3VideoModel`/`sam3_video`, a different architecture than `Sam3Model`, so transformers loads
+      mismatched weights. The PROVEN path (per the user's own validated
+      `how_to_segment_images_with_segment_anything_3.ipynb`) is the **official
+      `facebookresearch/sam3` GitHub package** (`build_sam3_image_model` + its own `Sam3Processor`),
+      cloned into `vendor/sam3/`. That package hard-pins `numpy<2`, incompatible with the main
+      pipeline's numpy>=2 (rfdetr/transformers/ultralytics) — so it's isolated in its own venv
+      (`.venv-sam3/`) and talked to over a subprocess worker (`sam3_worker.py`, newline-JSON over
+      stdin/stdout, model loaded ONCE and kept warm — avoids reloading the ~3.2GB checkpoint per
+      call). Needed an extra Windows-only fix: `triton` has no official Windows wheel, installed the
+      `triton-windows` community fork. After all that, the worker still **segfaults on this machine**
+      specifically inside `_create_text_encoder` (CLIP/BPE tokenizer + text tower construction) —
+      isolated via step-by-step logging to confirm the vision backbone builds fine, only the text
+      encoder crashes. Root cause not fully diagnosed; likely Windows/triton-windows/RTX-3050-specific
+      (the user already validated this exact official package working cleanly on **Colab**, a standard
+      Linux+CUDA environment). **Decision (user, 2026-06-21): stop debugging locally — verify on AWS
+      after deployment, where the environment matches Colab's (Linux, real GPU) far more closely.**
+      `helmet_triple.py` and `anpr.py` are already wired to call SAM-3 (per-rider helmet crop check;
+      "license plate" concept for ROI-gated plate localization) and degrade gracefully
+      (`model_unavailable`) if the worker isn't available — nothing is silently faked.
+- [x] **`pipeline.py` (rewritten orchestrator)** — wires all of the above:
+      detect -> helmet(SAM-3)+triple(proxy) · seatbelt(2-stage) · wrong-side(classifier) ·
+      signal(HSV) · geometry(abstains on stills) -> confidence cascade -> VLM verify
+      (`human_review` only) -> ROI-gated ANPR (SAM-3 plate-locate + TrOCR-ft, violators only) ->
+      signed evidence record. Added `process_array()` (in-memory image, no temp-file round trip)
+      alongside the existing `process_image()` (path-based) so the backend can call it directly.
+      **Tested end-to-end** (`--no-sam3`, VLM on): real RF-DETR detections, real wrong-side
+      classifier calls (one auto_confirm 0.96, one human_review 0.60 correctly escalated), VLM
+      verification fired and returned a real grounded caption, signed evidence record written.
+- [x] **`inference/service.py` (rewritten `_run_real`)** — loads the `ml/` `Pipeline` once
+      (lru_cache singleton), decodes uploaded bytes -> cv2 array -> `process_array()`, maps results
+      into the API's `Detection`/`ViolationResult`/`PlateResult` dataclasses (violation-type enum
+      mapping: `no_helmet`->`helmet`, `no_seatbelt`->`seatbelt`, etc.), reads the annotated evidence
+      image bytes for persistence. **Tested end-to-end through the actual FastAPI backend**
+      (`INFERENCE_MODE=real`, SAM-3 off, VLM on): `/api/process` -> real pipeline -> persisted to
+      Supabase (job + detections + violations + signed evidence image uploaded to Storage, real
+      public URL returned) -> verified via direct DB query -> cleaned up. Installed the backend's
+      web deps (fastapi/uvicorn/supabase/dotenv) into the **same** system 3.12 interpreter that
+      already has torch/rfdetr/transformers/cv2, matching the "combined service" decision for AWS
+      (one process serves both the API and inference).
+- [ ] **Next:** verify SAM-3 live on AWS once deployed; Dockerfile + AWS EC2 (g4dn.xlarge) deploy.
+
 ### Phase 0 blockers to resolve (need data/decisions)
 - [ ] AICC raw Track-5 videos/frames (registration-gated) — required for helmet+triple
 - [ ] ISLab-PVD event-level GT (or accept qualitative-only for illegal parking)
