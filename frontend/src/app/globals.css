@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-grotesk);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: #f6f7fb;
+  color: #0f172a;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ---- typography helpers ---- */
+.font-display {
+  font-family: var(--font-grotesk), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+.font-plate {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  letter-spacing: 0.06em;
+}
+
+/* ---- surfaces (frosted-glass light cards) ---- */
+.surface {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 28px -18px rgba(15, 23, 42, 0.12);
+}
+.surface-hover {
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.surface-hover:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  transform: translateY(-3px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 22px 44px -22px rgba(79, 70, 229, 0.3);
+}
+
+/* ---- ambient background mesh (soft tints on off-white) ---- */
+.mesh {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(46rem 34rem at 8% -10%, rgba(99, 102, 241, 0.12), transparent 60%),
+    radial-gradient(40rem 30rem at 100% 0%, rgba(20, 184, 166, 0.1), transparent 55%),
+    radial-gradient(38rem 38rem at 60% 120%, rgba(56, 189, 248, 0.08), transparent 60%);
+}
+
+/* ---- shimmer for loading ---- */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.shimmer {
+  background: #eef1f6;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.05), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+.live-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}

@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-06-19T13:43:38.892177+00:00",
+  "phase": "phase5",
+  "module": "wrongside_eval",
+  "run_id": "20260619-191336-e45a",
+  "dataset": "Wrong-Way OBB (test, held-out)",
+  "model": "mobilenet_v3_small (fine-tuned)",
+  "instances": 720,
+  "class_counts": {
+    "right-side": 629,
+    "wrong-side": 91
+  },
+  "metrics": {
+    "accuracy": 0.9889,
+    "wrongside_precision": 0.977,
+    "wrongside_recall": 0.9341,
+    "wrongside_f1": 0.9551
+  },
+  "baseline_geometry": "not_testable (abstains on stills)",
+  "verdict": "LEARNED classifier replaces geometry for the wrong-side verdict (Tier 2 promoted)"
+}

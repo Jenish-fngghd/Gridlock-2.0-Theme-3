@@ -1,0 +1,9 @@
+Model: LSTM trajectory classifier
+Checkpoint: checkpoints/redlight/v1/model.pt
+
+Architecture: LSTM(input_size=6, hidden_size=48, num_layers=1) + Linear(48, 2)
+Load: torch.load("checkpoints/redlight/v1/model.pt", map_location="cpu")
+
+Usage:
+  from src.modules.redlight import RedLightModule
+  module = RedLightModule(weights="checkpoints/redlight/v1/model.pt")

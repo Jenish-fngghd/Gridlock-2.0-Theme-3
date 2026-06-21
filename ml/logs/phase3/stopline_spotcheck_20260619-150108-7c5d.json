@@ -1,0 +1,73 @@
+{
+  "timestamp": "2026-06-19T09:31:14.831363+00:00",
+  "phase": "phase3",
+  "module": "stopline_spotcheck",
+  "run_id": "20260619-150108-7c5d",
+  "type": "QUALITATIVE SPOT-CHECK (NOT A METRIC)",
+  "violation": "stop_line",
+  "frames": 25,
+  "output_dir": "C:\\Users\\sorat\\Downloads\\Gridlock 2.0\\Gridlock 2.0_R2\\results\\stopline_spotcheck",
+  "items": [
+    {
+      "image": "0000120.jpg",
+      "vehicles": 10,
+      "annotated": "spotcheck_0000120.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    },
+    {
+      "image": "000012_r.jpg",
+      "vehicles": 9,
+      "annotated": "spotcheck_000012_r.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    },
+    {
+      "image": "0000180.jpg",
+      "vehicles": 6,
+      "annotated": "spotcheck_0000180.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    },
+    {
+      "image": "0000240.jpg",
+      "vehicles": 2,
+      "annotated": "spotcheck_0000240.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    },
+    {
+      "image": "000024_r.jpg",
+      "vehicles": 3,
+      "annotated": "spotcheck_000024_r.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    },
+    {
+      "image": "0000300.jpg",
+      "vehicles": 0,
+      "annotated": "spotcheck_0000300.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    },
+    {
+      "image": "000030_r.jpg",
+      "vehicles": 0,
+      "annotated": "spotcheck_000030_r.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    },
+    {
+      "image": "0000360.jpg",
+      "vehicles": 2,
+      "annotated": "spotcheck_0000360.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    },
+    {
+      "image": "000036_r.jpg",
+      "vehicles": 1,
+      "annotated": "spotcheck_000036_r.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    },
+    {
+      "image": "0000420.jpg",
+      "vehicles": 1,
+      "annotated": "spotcheck_0000420.jpg",
+      "verdict": "qualitative: geometry abstains on still; bottom-past-line shown as proxy"
+    }
+  ],
+  "note": "Stop-line has no dataset → no precision/recall/mAP is or will be reported for it. Annotated frames are for human inspection (plausible/implausible) only."
+}

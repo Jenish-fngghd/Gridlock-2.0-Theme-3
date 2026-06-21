@@ -1,0 +1,265 @@
+{
+  "timestamp": "2026-06-19T14:14:29.197092+00:00",
+  "phase": "phase5",
+  "module": "redlight_train",
+  "run_id": "20260619-194422-dd0e",
+  "model": "LSTM(6->48) trajectory classifier",
+  "version": "v1",
+  "epochs": 30,
+  "clips": 1314,
+  "train": 1071,
+  "test": 243,
+  "test_held_out_videos": 21,
+  "best_test_metrics": {
+    "accuracy": 0.9218,
+    "cross_precision": 0.914,
+    "cross_recall": 0.8854,
+    "cross_f1": 0.8995
+  },
+  "best_cross_f1": 0.8995,
+  "minutes": 0.06,
+  "checkpoint": "C:\\Users\\sorat\\Downloads\\Gridlock 2.0\\Gridlock 2.0_R2\\checkpoints\\redlight\\v1\\model.pt",
+  "agreement_with_rule_engine": "not computable (clips lack scene config/signal state; J3 harness in eval_redlight_sequence.py)",
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 0.6662,
+      "accuracy": 0.8807,
+      "cross_precision": 0.8602,
+      "cross_recall": 0.8333,
+      "cross_f1": 0.8466
+    },
+    {
+      "epoch": 2,
+      "loss": 0.4972,
+      "accuracy": 0.7572,
+      "cross_precision": 0.6457,
+      "cross_recall": 0.8542,
+      "cross_f1": 0.7354
+    },
+    {
+      "epoch": 3,
+      "loss": 0.3926,
+      "accuracy": 0.8765,
+      "cross_precision": 0.8587,
+      "cross_recall": 0.8229,
+      "cross_f1": 0.8404
+    },
+    {
+      "epoch": 4,
+      "loss": 0.3515,
+      "accuracy": 0.8436,
+      "cross_precision": 0.7736,
+      "cross_recall": 0.8542,
+      "cross_f1": 0.8119
+    },
+    {
+      "epoch": 5,
+      "loss": 0.3476,
+      "accuracy": 0.9012,
+      "cross_precision": 0.9186,
+      "cross_recall": 0.8229,
+      "cross_f1": 0.8681
+    },
+    {
+      "epoch": 6,
+      "loss": 0.3423,
+      "accuracy": 0.8807,
+      "cross_precision": 0.8317,
+      "cross_recall": 0.875,
+      "cross_f1": 0.8528
+    },
+    {
+      "epoch": 7,
+      "loss": 0.3289,
+      "accuracy": 0.9053,
+      "cross_precision": 0.974,
+      "cross_recall": 0.7812,
+      "cross_f1": 0.8671
+    },
+    {
+      "epoch": 8,
+      "loss": 0.3182,
+      "accuracy": 0.9136,
+      "cross_precision": 0.931,
+      "cross_recall": 0.8438,
+      "cross_f1": 0.8852
+    },
+    {
+      "epoch": 9,
+      "loss": 0.3044,
+      "accuracy": 0.9136,
+      "cross_precision": 0.931,
+      "cross_recall": 0.8438,
+      "cross_f1": 0.8852
+    },
+    {
+      "epoch": 10,
+      "loss": 0.3012,
+      "accuracy": 0.9012,
+      "cross_precision": 0.883,
+      "cross_recall": 0.8646,
+      "cross_f1": 0.8737
+    },
+    {
+      "epoch": 11,
+      "loss": 0.2994,
+      "accuracy": 0.9053,
+      "cross_precision": 0.8842,
+      "cross_recall": 0.875,
+      "cross_f1": 0.8796
+    },
+    {
+      "epoch": 12,
+      "loss": 0.2845,
+      "accuracy": 0.9012,
+      "cross_precision": 0.8529,
+      "cross_recall": 0.9062,
+      "cross_f1": 0.8788
+    },
+    {
+      "epoch": 13,
+      "loss": 0.2905,
+      "accuracy": 0.8477,
+      "cross_precision": 0.7438,
+      "cross_recall": 0.9375,
+      "cross_f1": 0.8295
+    },
+    {
+      "epoch": 14,
+      "loss": 0.2818,
+      "accuracy": 0.893,
+      "cross_precision": 0.8241,
+      "cross_recall": 0.9271,
+      "cross_f1": 0.8725
+    },
+    {
+      "epoch": 15,
+      "loss": 0.2838,
+      "accuracy": 0.9053,
+      "cross_precision": 0.8687,
+      "cross_recall": 0.8958,
+      "cross_f1": 0.8821
+    },
+    {
+      "epoch": 16,
+      "loss": 0.269,
+      "accuracy": 0.9136,
+      "cross_precision": 0.9213,
+      "cross_recall": 0.8542,
+      "cross_f1": 0.8865
+    },
+    {
+      "epoch": 17,
+      "loss": 0.2821,
+      "accuracy": 0.8642,
+      "cross_precision": 0.7692,
+      "cross_recall": 0.9375,
+      "cross_f1": 0.8451
+    },
+    {
+      "epoch": 18,
+      "loss": 0.2811,
+      "accuracy": 0.9218,
+      "cross_precision": 0.914,
+      "cross_recall": 0.8854,
+      "cross_f1": 0.8995
+    },
+    {
+      "epoch": 19,
+      "loss": 0.2668,
+      "accuracy": 0.9012,
+      "cross_precision": 0.8462,
+      "cross_recall": 0.9167,
+      "cross_f1": 0.88
+    },
+    {
+      "epoch": 20,
+      "loss": 0.2709,
+      "accuracy": 0.9095,
+      "cross_precision": 0.87,
+      "cross_recall": 0.9062,
+      "cross_f1": 0.8878
+    },
+    {
+      "epoch": 21,
+      "loss": 0.2669,
+      "accuracy": 0.9053,
+      "cross_precision": 0.8544,
+      "cross_recall": 0.9167,
+      "cross_f1": 0.8844
+    },
+    {
+      "epoch": 22,
+      "loss": 0.2863,
+      "accuracy": 0.9012,
+      "cross_precision": 0.8396,
+      "cross_recall": 0.9271,
+      "cross_f1": 0.8812
+    },
+    {
+      "epoch": 23,
+      "loss": 0.2776,
+      "accuracy": 0.9095,
+      "cross_precision": 0.9111,
+      "cross_recall": 0.8542,
+      "cross_f1": 0.8817
+    },
+    {
+      "epoch": 24,
+      "loss": 0.2732,
+      "accuracy": 0.8683,
+      "cross_precision": 0.7857,
+      "cross_recall": 0.9167,
+      "cross_f1": 0.8462
+    },
+    {
+      "epoch": 25,
+      "loss": 0.2568,
+      "accuracy": 0.9136,
+      "cross_precision": 0.8947,
+      "cross_recall": 0.8854,
+      "cross_f1": 0.8901
+    },
+    {
+      "epoch": 26,
+      "loss": 0.2521,
+      "accuracy": 0.8889,
+      "cross_precision": 0.8165,
+      "cross_recall": 0.9271,
+      "cross_f1": 0.8683
+    },
+    {
+      "epoch": 27,
+      "loss": 0.2588,
+      "accuracy": 0.9012,
+      "cross_precision": 0.8673,
+      "cross_recall": 0.8854,
+      "cross_f1": 0.8763
+    },
+    {
+      "epoch": 28,
+      "loss": 0.2624,
+      "accuracy": 0.893,
+      "cross_precision": 0.8241,
+      "cross_recall": 0.9271,
+      "cross_f1": 0.8725
+    },
+    {
+      "epoch": 29,
+      "loss": 0.2716,
+      "accuracy": 0.9053,
+      "cross_precision": 0.8614,
+      "cross_recall": 0.9062,
+      "cross_f1": 0.8832
+    },
+    {
+      "epoch": 30,
+      "loss": 0.2613,
+      "accuracy": 0.9012,
+      "cross_precision": 0.8529,
+      "cross_recall": 0.9062,
+      "cross_f1": 0.8788
+    }
+  ]
+}

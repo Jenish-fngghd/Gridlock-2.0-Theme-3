@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-06-19T08:33:20.135197+00:00",
+  "phase": "phase3",
+  "module": "detection",
+  "run_id": "20260619-140301-6ffe",
+  "dataset": "IDD-Detection (val)",
+  "images": 100,
+  "variant": "nano",
+  "threshold": 0.3,
+  "gt_objects_scored": 313,
+  "detections": 297,
+  "metrics": {
+    "mAP@0.5:0.95": 0.2272,
+    "mAP@0.5": 0.4043,
+    "per_class_AP@0.5": {
+      "person": 0.4853,
+      "bicycle": 0.0,
+      "car": 0.6319,
+      "motorcycle": 0.2929,
+      "bus": 0.3126,
+      "truck": 0.7034,
+      "traffic light": 0.0
+    }
+  },
+  "domain_gap_classes_in_GT": {
+    "autorickshaw": 21,
+    "vehicle fallback": 41,
+    "traffic sign": 7,
+    "animal": 3
+  },
+  "domain_gap_note": "These IDD classes have NO COCO equivalent, so zero-shot RF-DETR cannot detect them (~0 recall). Closing this needs the data-engine + fine-tune (§3.10/§8). NOT included in the mAP above."
+}

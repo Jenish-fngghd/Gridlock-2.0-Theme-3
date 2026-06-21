@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-06-19T15:27:18.215422+00:00",
+  "phase": "phase3",
+  "module": "anpr",
+  "run_id": "20260619-203717-624f",
+  "dataset": "Indian-LP sirishan (GT plate box+text)",
+  "engine": "paddleocr",
+  "samples": 1000,
+  "plate_exact_match_acc": 0.449,
+  "plate_exact_match_acc_raw": 0.445,
+  "CER": 0.1962,
+  "1-NED": 0.8015,
+  "indian_format_valid_rate": 0.634,
+  "improvements": "multi-line merge + syntax-aware correction (no fine-tune)",
+  "examples": [
+    {
+      "gt": "KA19TR02",
+      "raw": "KA19TR0220102011",
+      "pred": "KA19TR0220102011",
+      "edit": 8
+    },
+    {
+      "gt": "TN21AT0492",
+      "raw": "TN21AT0492",
+      "pred": "TN21AT0492",
+      "edit": 0
+    },
+    {
+      "gt": "RJ27TC0530",
+      "raw": "RI27TC0530",
+      "pred": "RI27TC0530",
+      "edit": 1
+    },
+    {
+      "gt": "MH20CS9817",
+      "raw": "MH20CS9817",
+      "pred": "MH20CS9817",
+      "edit": 0
+    },
+    {
+      "gt": "KL05AK3300",
+      "raw": "KL05AK3300",
+      "pred": "KL05AK3300",
+      "edit": 0
+    },
+    {
+      "gt": "MP09CP9052",
+      "raw": "P099052",
+      "pred": "P099052",
+      "edit": 3
+    },
+    {
+      "gt": "TN43J0158",
+      "raw": "TN43J0158",
+      "pred": "TN43J0158",
+      "edit": 0
+    },
+    {
+      "gt": "KA18P2987",
+      "raw": "KA18P2987",
+      "pred": "KA18P2987",
+      "edit": 0
+    },
+    {
+      "gt": "MH12JC2813",
+      "raw": "MH12JC2813",
+      "pred": "MH12JC2813",
+      "edit": 0
+    },
+    {
+      "gt": "MH14DT8831",
+      "raw": "MH14DT8831",
+      "pred": "MH14DT8831",
+      "edit": 0
+    }
+  ],
+  "note": "OCR scored on GT plate crops (isolates OCR from plate-detection, which is a separate fine-tune step — zero-shot has no plate class). PaddleOCR (PP-OCRv5/v6, the design's primary) runs in a Python-3.12 venv (.venv-paddle) since paddle has no Py3.14 wheel; EasyOCR is the named backup. oneDNN disabled (FLAGS_use_mkldnn=0) to avoid a paddle-3.x CPU PIR bug."
+}

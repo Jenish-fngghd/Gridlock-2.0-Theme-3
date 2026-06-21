@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-06-19T13:09:55.481882+00:00",
+  "phase": "phase3",
+  "module": "anpr",
+  "run_id": "20260619-183917-b034",
+  "dataset": "Indian-LP sirishan (GT plate box+text)",
+  "engine": "easyocr",
+  "samples": 300,
+  "plate_exact_match_acc": 0.31,
+  "CER": 0.312,
+  "1-NED": 0.6881,
+  "indian_format_valid_rate": 0.31,
+  "examples": [
+    {
+      "gt": "KA19TR02",
+      "pred": "KA197R02120102011",
+      "edit": 10
+    },
+    {
+      "gt": "TN21AT0492",
+      "pred": "0492",
+      "edit": 6
+    },
+    {
+      "gt": "RJ27TC0530",
+      "pred": "RZ7TC0530",
+      "edit": 2
+    },
+    {
+      "gt": "MH20CS9817",
+      "pred": "MH2OCS9817",
+      "edit": 1
+    },
+    {
+      "gt": "KL05AK3300",
+      "pred": "KLO5AK3300",
+      "edit": 1
+    },
+    {
+      "gt": "MP09CP9052",
+      "pred": "9052",
+      "edit": 6
+    },
+    {
+      "gt": "TN43J0158",
+      "pred": "JO158",
+      "edit": 5
+    },
+    {
+      "gt": "KA18P2987",
+      "pred": "2987",
+      "edit": 5
+    }
+  ],
+  "note": "OCR scored on GT plate crops (isolates OCR from plate-detection, which is a separate fine-tune step — zero-shot has no plate class). EasyOCR is the design's named backup OCR; PP-OCRv5 is the intended primary (not installable here)."
+}

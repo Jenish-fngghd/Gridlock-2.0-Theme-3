@@ -1,0 +1,123 @@
+{
+  "timestamp": "2026-06-19T07:23:25.330885+00:00",
+  "phase": "phase0",
+  "module": "hardware",
+  "run_id": "20260619-125322-d928",
+  "environment": {
+    "cpu_ram": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+      "python": "3.14.3",
+      "cpu_count": 16,
+      "ram_gb": 15.3
+    },
+    "gpu_torch": {
+      "torch_cuda_available": true,
+      "devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+          "vram_gb": 4.0,
+          "capability": "8.6"
+        }
+      ],
+      "error": null,
+      "torch_version": "2.12.0+cu126"
+    },
+    "gpu_nvidia_smi": {
+      "available": true,
+      "raw": "NVIDIA GeForce RTX 3050 Laptop GPU, 4096 MiB, 572.60"
+    },
+    "packages": {
+      "core": {
+        "numpy": {
+          "ok": true,
+          "version": "2.4.3"
+        },
+        "cv2": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'cv2'"
+        },
+        "PIL": {
+          "ok": true,
+          "version": "12.1.1"
+        },
+        "pandas": {
+          "ok": true,
+          "version": "3.0.1"
+        },
+        "lxml": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'lxml'"
+        },
+        "yaml": {
+          "ok": true,
+          "version": "6.0.3"
+        }
+      },
+      "torch": {
+        "torch": {
+          "ok": true,
+          "version": "2.12.0+cu126"
+        },
+        "torchvision": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'torchvision'"
+        }
+      },
+      "detection": {
+        "rfdetr": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'rfdetr'"
+        },
+        "ultralytics": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'ultralytics'"
+        },
+        "supervision": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'supervision'"
+        }
+      },
+      "ocr": {
+        "paddleocr": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'paddleocr'"
+        },
+        "paddle": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'paddle'"
+        },
+        "easyocr": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'easyocr'"
+        }
+      },
+      "vlm": {
+        "transformers": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'transformers'"
+        },
+        "huggingface_hub": {
+          "ok": true,
+          "version": "1.7.2"
+        }
+      },
+      "eval": {
+        "pycocotools": {
+          "ok": false,
+          "error": "ModuleNotFoundError: No module named 'pycocotools'"
+        }
+      }
+    }
+  },
+  "tier": {
+    "tier": "cloud_required",
+    "recommendations": {
+      "detector_inference": "RF-DETR-N on CPU (slow) or push to cloud GPU",
+      "detector_finetune": "NOT local — use cloud (e.g. Lightning H200)",
+      "stage2_codetr": "stub (not runnable locally)",
+      "vlm_verifier": "stub (not runnable locally)",
+      "batch_size": 1
+    }
+  }
+}

@@ -1,0 +1,47 @@
+timestamp,run_id,phase,module,dataset,model,metric,value,target,pass_fail,note
+2026-06-19T07:27:13.244884+00:00,20260619-125709-93d2,phase0,data_audit,ALL(11),-,datasets_ready,7,11,info,see logs/dataset_audit_report.md
+2026-06-19T08:15:55.375271+00:00,20260619-134532-dd9e,phase3,detection,IDD,rfdetr-nano-zeroshot,mAP@0.5,0.0023,0.787,baseline,100 imgs; gap classes excluded
+2026-06-19T08:33:20.140926+00:00,20260619-140301-6ffe,phase3,detection,IDD,rfdetr-nano-zeroshot,mAP@0.5,0.4043,0.787,baseline,100 imgs; gap classes excluded
+2026-06-19T09:20:00.307737+00:00,20260619-144952-0c15,phase3,signal_state,LISA,HSV-tier0,accuracy,0.9967,baseline,tier0,1500 frames
+2026-06-19T09:20:51.915517+00:00,20260619-145022-4e66,phase3,signal_state,LISA,HSV-tier0,accuracy,0.9324,baseline,tier0,8000 frames
+2026-06-19T09:27:03.275613+00:00,20260619-145646-907c,phase3,wrongside,Wrong-Way,geometry-rule,verdict,not_testable,§7 P/R/F1,tier2,det_recall=0.6081
+2026-06-19T09:31:02.084054+00:00,20260619-150101-eba8,phase3,seatbelt,seatbelt-OBB,none,status,not_testable,§7,tier1,mandatory fine-tune
+2026-06-19T09:31:02.380392+00:00,20260619-150102-dc8c,phase3,redlight_event,RunningRedlight,rule+learned,agreement,n/a,agreement-rate,tier2,500 clips; harness ready
+2026-06-19T09:31:02.462984+00:00,20260619-150102-8df7,phase3,illegal_parking,ISLab-PVD,geometry-dwell,event_PR,not_testable,event P/R,blocked,GT absent on disk
+2026-06-19T10:22:30.535900+00:00,20260619-155104-652e,phase3,detection,IDD,rfdetr-nano-zeroshot,mAP@0.5,0.4183,0.787,baseline,600 imgs; gap classes excluded
+2026-06-19T13:09:55.483908+00:00,20260619-183917-b034,phase3,anpr,Indian-LP,easyocr,plate_exact_acc,0.31,vs SOTA,baseline,CER=0.312 N=300
+2026-06-19T13:24:43.441716+00:00,20260619-185406-7e6c,phase3,anpr,Indian-LP,easyocr,plate_exact_acc,0.4833,vs SOTA,baseline,CER=0.2278 N=300
+2026-06-19T13:38:36.670406+00:00,20260619-190807-b543,phase5,wrongside,Wrong-Way,mobilenetv3s-ft,val_wrongside_f1,0.8444,beat geometry abstain,finetune,1ep 0.22min
+2026-06-19T13:42:48.580326+00:00,20260619-190850-2ee9,phase5,wrongside,Wrong-Way,mobilenetv3s-ft,val_wrongside_f1,0.988,beat geometry abstain,finetune,15ep 3.77min
+2026-06-19T13:43:38.894708+00:00,20260619-191336-e45a,phase5,wrongside,Wrong-Way(test),mobilenetv3s-ft,wrongside_f1,0.9551,beat geometry abstain,finetuned,acc=0.9889 P=0.977 R=0.9341
+2026-06-19T14:04:25.366964+00:00,20260619-193331-33c1,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3s-ft,no_seatbelt_f1,0.6347,from not_testable,finetuned,acc=0.7071 12ep 0.77min
+2026-06-19T14:07:56.997763+00:00,20260619-193520-3487,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3s-ft,no_seatbelt_f1,0.6776,from not_testable,finetuned,acc=0.7633 14ep 2.46min
+2026-06-19T14:09:49.348657+00:00,20260619-193845-44d3,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3s-ft,no_seatbelt_f1,0.6194,from not_testable,finetuned,acc=0.6775 18ep 0.94min
+2026-06-19T14:14:29.198772+00:00,20260619-194422-dd0e,phase5,redlight_event,RunningRedlight,LSTM-traj,cross_f1,0.8995,from not_testable,finetuned,acc=0.9218 split-by-video 21vids
+2026-06-19T14:38:21.281736+00:00,20260619-200126-6198,phase3,anpr,Indian-LP,paddleocr,plate_exact_acc,0.5867,vs SOTA,baseline,CER=0.1742 N=300
+2026-06-19T15:27:18.215422+00:00,20260619-203717-624f,phase3,anpr,Indian-LP,paddleocr,plate_exact_acc,0.449,vs SOTA,baseline,CER=0.1962 N=1000
+2026-06-19T19:29:49.093216+00:00,20260620-005949-b127,phase6,helmet_zeroshot,IDD(no GT),leeyunjai-yolo11-helmet + RF-DETR,qualitative,capability_shown,n/a,qualitative,"50 frames,70 motos,29 heads,1 helmet/28 noHelmet; cross-domain, needs finetune"
+2026-06-20T13:15:59.708110+00:00,20260620-184314-6b0f,phase3,detection,IDD,rfdetr-nano-zeroshot,mAP@0.5,0.4803,0.787,baseline,1000 imgs; gap classes excluded
+2026-06-20T17:03:51.789797+00:00,20260620-165700-d53a,phase5,windshield_detector,seatbelt-OBB(windshield-only),yolo11n-ft,mAP50,0.995,Stage-1 of §3.5 two-stage,finetuned,80ep 6.69min mAP50-95=0.8576
+2026-06-20T17:03:58.832790+00:00,20260620-170338-57e5,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3s-ft(224px),no_seatbelt_f1,0.7124,from not_testable,finetuned,acc=0.7396 20ep v2b
+2026-06-20T17:05:12.263655+00:00,20260620-170449-6a93,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3l-ft(224px),no_seatbelt_f1,0.7373,from not_testable,finetuned,acc=0.8136 20ep v3-interim
+2026-06-20T17:06:38.655080+00:00,20260620-170535-bad2,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3l-ft(224px),no_seatbelt_f1,0.8016,from not_testable,finetuned,acc=0.8550 80ep v3 BEST
+2026-06-20T17:09:50.587484+00:00,20260620-170937-5f73,phase5,seatbelt_e2e,seatbelt-OBB(valid),yolo11n+mobilenet_v3_large,f1,0.7866,beat/match GT-crop F1=0.678,finetuned,acc=0.8487 P=0.8545 R=0.7287 matched=337/338
+2026-06-20T17:10:47.616203+00:00,20260620-171036-fe73,phase5,seatbelt_e2e,seatbelt-OBB(valid),yolo11n+mobilenet_v3_small,f1,0.6711,beat/match GT-crop F1=0.678,finetuned,acc=0.7062 P=0.5872 R=0.7829 matched=337/338
+2026-06-20T17:11:36.518481+00:00,20260620-171125-0121,phase5,helmet_triple_zeroshot,sample-violation-images,RF-DETR-nano(COCO)@640px,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,helmet=11/11 triple=6/6 triple_triggered=2/6 helmet_state=not_testable
+2026-06-20T17:18:36.690022+00:00,20260620-171831-eb8a,phase5,helmet_triple_zeroshot,sample-violation-images,RF-DETR-nano(COCO)@640px,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,helmet=11/11 triple=6/6 triple_triggered=3/6 helmet_state=not_testable
+2026-06-20T17:19:38.599943+00:00,20260620-171934-af36,phase5,signal_zeroshot,sample-violation-images(redlight),HSV+RF-DETR-nano,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,red_hits=7/7 conf=0.25
+2026-06-20T17:20:30.917950+00:00,20260620-172028-e4bd,phase5,signal_zeroshot,sample-violation-images(redlight),HSV+RF-DETR-nano,hit_rate_proxy,0.857,qualitative (capability signal),zeroshot,red_hits=6/7 conf=0.25 (039_frame borderline)
+2026-06-20T17:35:49.454428+00:00,20260620-173542-344e,phase5,helmet_triple_zeroshot,sample-violation-images,RF-DETR-nano(COCO)@1280px,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,helmet=11/11 triple=6/6 triple_triggered=4/6 helmet_state=not_testable
+2026-06-20T17:36:22.760475+00:00,20260620-173618-b1f8,phase5,signal_zeroshot,sample-violation-images(redlight),HSV+RF-DETR-nano,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,red_hits=7/7 conf=0.15
+2026-06-20T17:36:24.897248+00:00,20260620-173457-a3f3,phase5,seatbelt,seatbelt-OBB(valid),mobilenetv3l-ft(224px-cosine),no_seatbelt_f1,0.8048,from not_testable,finetuned,acc=0.8432 120ep cosine-LR v4
+2026-06-20T17:37:15.378106+00:00,20260620-173710-a747,phase5,helmet_triple_zeroshot,sample-violation-images,RF-DETR-nano(COCO)@1280px,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,helmet=11/11 triple=6/6 triple_triggered=2/6 helmet_state=not_testable
+2026-06-20T17:37:27.080669+00:00,20260620-173724-f13e,phase5,signal_zeroshot,sample-violation-images(redlight),HSV+RF-DETR-nano,hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,red_hits=7/7 conf=0.15
+2026-06-20T17:39:04.815719+00:00,20260620-173851-18d0,phase5,seatbelt_e2e,seatbelt-OBB(valid),yolo11n+mobilenet_v3_large(cosine),f1,0.8082,beat/match GT-crop F1=0.678,finetuned,acc=0.8605 P=0.8534 R=0.7674 matched=337/338 NEW-BEST
+2026-06-20T18:00:00.000000+00:00,20260620-sam3-helmet,phase5,helmet_state_zeroshot,sample-violation-images,SAM-3(open-vocab),hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,helmet_no + helmet_yes prompts confirmed DONE via SAM-3
+2026-06-20T18:00:00.000000+00:00,20260620-sam3-triple,phase5,triple_riding_zeroshot,sample-violation-images,SAM-3(open-vocab),hit_rate_proxy,1.0,qualitative (capability signal),zeroshot,triple_riding prompt confirmed DONE via SAM-3
+2026-06-20T22:17:14.422856+00:00,20260621-034534-d69f,phase3,detection,IDD,rfdetr-large-zeroshot,mAP@0.5,0.4934,0.787,baseline,1000 imgs; gap classes excluded
+2026-06-20T22:22:59.990602+00:00,20260621-034802-7566,phase3,detection,IDD,rfdetr-large-zeroshot,mAP@0.5,0.4866,0.787,baseline,3000 imgs; gap classes excluded
+2026-06-20T22:33:08.852620+00:00,20260621-040002-545c,phase3,detection,IDD,rfdetr-xlarge-zeroshot,mAP@0.5,0.4073,0.787,baseline,3000 imgs; gap classes excluded
+2026-06-20T22:42:26.903379+00:00,20260621-040331-ca91,phase3,detection,IDD,rfdetr-large-zeroshot,mAP@0.5,0.5216,0.787,baseline,5000 imgs; gap classes excluded
+2026-06-20T22:50:56.994424+00:00,20260621-041258-77a7,phase3,detection,IDD,rfdetr-large-zeroshot,mAP@0.5,0.4876,0.787,baseline,5000 imgs; gap classes excluded

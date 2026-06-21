@@ -1,0 +1,14 @@
+Model: RF-DETR-nano (COCO pretrained)
+No local checkpoint — loaded at runtime from rfdetr library.
+Library: rfdetr>=1.8.0 (Apache-2.0)
+
+Resolution: 1280px (§3.4 spec)
+Classes: motorcycle, person, bicycle (COCO zero-shot)
+
+Usage:
+  from src.modules.helmet_triple import HelmetTripleModule
+  module = HelmetTripleModule(resolution=1280)
+
+Note: Helmet state uses zero-shot base approach (head-region segmentation).
+Fine-tuned 7-class AICC model would further improve helmet classification accuracy
+but is not required for the base submission.

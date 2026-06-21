@@ -1,0 +1,16 @@
+Stage 1 — Windshield Detector
+  Checkpoint: checkpoints/windshield/v1/weights/best.pt
+  Architecture: YOLOv11n (Ultralytics)
+  mAP@0.5: 0.995
+  Load: from ultralytics import YOLO; model = YOLO("checkpoints/windshield/v1/weights/best.pt")
+
+Stage 2 — Belt Classifier
+  Checkpoint: checkpoints/seatbelt/v4/model.pt
+  Architecture: MobileNetV3-large (torchvision)
+  val no_seatbelt F1: 0.8048
+  Load: torch.load("checkpoints/seatbelt/v4/model.pt", map_location="cpu")
+  Backbone key in checkpoint: "backbone": "mobilenet_v3_large"
+
+End-to-end inference via:
+  from src.modules.seatbelt import SeatbeltModule
+  module = SeatbeltModule()  # auto-loads both checkpoints

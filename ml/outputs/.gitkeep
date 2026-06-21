@@ -1,0 +1,2 @@
+# Keep this folder under version control. Generated artifacts (annotated images,
+# evidence JSON, benchmark_results.json) are written here and are git-ignored.

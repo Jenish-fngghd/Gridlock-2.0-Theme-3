@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-06-19T09:31:02.378993+00:00",
+  "phase": "phase3",
+  "module": "redlight_sequence",
+  "run_id": "20260619-150102-dc8c",
+  "dataset": "RunningRedlight (clip-level meta.cross)",
+  "clips": 500,
+  "gt_distribution": {
+    "violation(cross=true)": 101,
+    "no_violation": 399
+  },
+  "geometry_rule_verdict": "not_testable (clips lack per-clip stop-line/signal scene config)",
+  "learned_classifier": "untrained (Tier 2) — train LSTM/Transformer on these sequences (Phase 5)",
+  "agreement_rate": null,
+  "tier": "tier_2 (independent cross-check vs rule engine; do NOT auto-merge — J3)",
+  "note": "Agreement-rate harness ready: once the rule engine has a scene config OR the learned classifier is trained, run both per clip and report fraction-agree as a validation of the interpretable rule (J3 'geometry over black-box')."
+}

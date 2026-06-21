@@ -1,0 +1,57 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.venv-paddle/
+.venv-web/
+venv/
+env/
+.ipynb_checkpoints/
+
+# --- Datasets & outputs (large / generated; keep the placeholders) ---
+ml/datasets/*
+!ml/datasets/README.md
+ml/outputs/*
+!ml/outputs/.gitkeep
+
+# --- Model weights / caches ---
+# Blanket-ignored (old experiment versions, pretrained-zero-shot fallbacks, training artifacts);
+# the handful the live pipeline actually loads are un-ignored below and shipped via Git LFS.
+*.pt
+*.onnx
+*.pdparams
+.cache/
+.agents
+!/ml/checkpoints/windshield/v1/weights/best.pt
+!/ml/checkpoints/seatbelt/v4/model.pt
+!/ml/checkpoints/wrongside/v1/model.pt
+!/ml/checkpoints/redlight/v1/model.pt
+
+# --- Vendored / isolated SAM-3 env (cloned + built separately on each machine, see infra/DEPLOY.md) ---
+vendor/
+.venv-sam3/
+
+# --- OS / IDE / tooling ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/settings.local.json
+
+# --- Web app (backend / frontend / inference) ---
+node_modules/
+.next/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.local
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+
+# Model weights
+*.safetensors
+!/ml/checkpoints/anpr/trocr_ft/model.safetensors

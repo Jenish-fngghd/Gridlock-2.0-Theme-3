@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-06-19T19:25:08.709266+00:00",
+  "phase": "phase6",
+  "module": "helmet_zeroshot",
+  "run_id": "20260620-003847-e6df",
+  "type": "QUALITATIVE capability test (no helmet GT in IDD — NOT a benchmark metric)",
+  "helmet_model": "leeyunjai/yolo11-helmet (helmet-11s) — PPE-domain, cross-domain transfer",
+  "stage1_detector": "RF-DETR-nano (motorcycle+person)",
+  "frames_with_motorcycles_examined": 0,
+  "motorcycles_found": 0,
+  "head_detections": 0,
+  "helmet_heads": 0,
+  "no_helmet_heads": 0,
+  "helmet_rate": 0.0,
+  "annotated_saved": 0,
+  "output_dir": "C:\\Users\\sorat\\Downloads\\Gridlock 2.0\\Gridlock 2.0_R2\\results\\helmet_zeroshot",
+  "examples": [],
+  "note": "Counts show the model DOES fire on motorcyclist heads cross-domain. Without GT we cannot score accuracy — inspect annotated frames in output_dir to judge quality. For a real metric, fine-tune on AICC/motorcycle-helmet data (Tier 1)."
+}

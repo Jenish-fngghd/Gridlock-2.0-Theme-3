@@ -1,0 +1,28 @@
+# Gridlock 2.0 R2 - dependencies for src/pipeline.py
+# The pipeline degrades gracefully: install what you can; missing pieces are stubbed.
+# torch/torchvision are installed SEPARATELY with the CUDA index-url (see Dockerfile /
+# README setup) — not listed here to avoid pip resolving a CPU-only wheel on top.
+
+# --- Core (required) ---
+numpy>=2.0
+opencv-python>=4.8
+
+# --- Detection / models ---
+rfdetr>=1.8                 # RF-DETR primary detector (Apache-2.0)
+ultralytics>=8.1             # YOLOv11n windshield detector (Stage-1 seatbelt)
+huggingface_hub>=0.23
+transformers>=5.0           # TrOCR (ANPR fine-tuned engine)
+
+# --- OCR (ANPR) ---
+paddleocr>=2.7              # alternate OCR engine (Apache-2.0). PaddleOCR 3.x changed its API;
+                            # if on 3.x and OCR misbehaves, try:  pip install "paddleocr<3"
+paddlepaddle>=2.6          # PaddleOCR backend (GPU: paddlepaddle-gpu)
+easyocr>=1.7               # OCR fallback
+
+# --- Confidence-cascade VLM verifier (NVIDIA NIM) ---
+requests>=2.31
+
+# --- Quality / metrics / utils ---
+pyiqa>=0.1.10              # no-reference IQA (BRISQUE/NIQE); OpenCV Laplacian fallback if absent
+pycocotools>=2.0.7         # COCO-format mAP (optional; custom mAP used if absent)
+supervision>=0.20          # optional: annotation helpers (not required)

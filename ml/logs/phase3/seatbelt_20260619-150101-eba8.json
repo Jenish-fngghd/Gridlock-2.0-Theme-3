@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-06-19T09:31:02.082431+00:00",
+  "phase": "phase3",
+  "module": "seatbelt",
+  "run_id": "20260619-150101-eba8",
+  "dataset": "seat_belt-and-mobile OBB",
+  "status": "not_testable",
+  "tier": "tier_1 (mandatory fine-tune — no zero-shot checkpoint)",
+  "finetune_data": {
+    "train": {
+      "images": 779,
+      "instances_by_class": {
+        "mobile": 349,
+        "seatbelt": 470,
+        "windshield": 780
+      }
+    },
+    "valid": {
+      "images": 337,
+      "instances_by_class": {
+        "mobile": 138,
+        "seatbelt": 208,
+        "windshield": 338
+      }
+    },
+    "test": {
+      "images": 0,
+      "instances_by_class": {
+        "mobile": 0,
+        "seatbelt": 0,
+        "windshield": 0
+      }
+    }
+  },
+  "out_of_scope_class": "mobile (detected-but-flagged, outside 7 mandated violations)",
+  "note": "not_testable: no zero-shot windshield/belt checkpoint. Fine-tune on seat_belt-and-mobile OBB (779 train). 'mobile' class = out-of-scope (logged, not used)."
+}

@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-06-19T09:31:02.460986+00:00",
+  "phase": "phase3",
+  "module": "illegal_parking",
+  "run_id": "20260619-150102-8df7",
+  "dataset": "ISLab-PVD (illegal parking, event-level)",
+  "videos": 16,
+  "ground_truth_files": 0,
+  "status": "not_testable: GT absent on disk → event-level P/R not computable",
+  "eval_method": "event-level window P/R (event_pr), NOT box mAP",
+  "tier": "blocked (data) → qualitative demo only until GT / alternative dataset supplied",
+  "note": "Geometry dwell-rule can still PRODUCE candidate parking events for a qualitative demo (no metric). User is sourcing an alternative illegal-parking dataset; plug it into event_pr() here when ready."
+}

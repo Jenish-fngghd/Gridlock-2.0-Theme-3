@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-06-19T09:20:00.306202+00:00",
+  "phase": "phase3",
+  "module": "signal_state",
+  "run_id": "20260619-144952-0c15",
+  "dataset": "LISA (frame-level signal state)",
+  "model": "HSV classifier (Tier 0, rule-based)",
+  "frames_scored": 1500,
+  "skipped": 0,
+  "accuracy": 0.9967,
+  "per_class": {
+    "red": {
+      "precision": 0.9967,
+      "recall": 0.9992,
+      "f1": 0.998,
+      "support": 1226
+    },
+    "yellow": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0
+    },
+    "green": {
+      "precision": 0.9963,
+      "recall": 0.9854,
+      "f1": 0.9908,
+      "support": 274
+    }
+  },
+  "gt_distribution": {
+    "red": 1226,
+    "green": 274
+  },
+  "tier": "tier_0 (rule-based, no fine-tune)"
+}
