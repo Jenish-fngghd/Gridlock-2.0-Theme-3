@@ -23,9 +23,29 @@ class ViolationOut(BaseModel):
     evidence: dict[str, Any] = {}
 
 
+class DetectionOut(BaseModel):
+    class_label: str
+    confidence: float | None = None
+    # bbox is normalized 0..1 — {x, y, w, h} with (x,y) the top-left corner.
+    bbox: dict[str, float]
+    track_id: int | None = None
+
+
+class StageOut(BaseModel):
+    """One real pipeline stage and what it produced — drives the Detect step rail."""
+    key: str
+    label: str
+    ran: bool
+    detail: str = ""
+
+
 class ProcessOut(BaseModel):
     job_id: str | None = None
     status: str
     processing_ms: int
     persisted: bool
+    model_version: str | None = None
+    annotated_image_url: str | None = None
+    detections: list[DetectionOut] = []
+    stages: list[StageOut] = []
     violations: list[ViolationOut] = []

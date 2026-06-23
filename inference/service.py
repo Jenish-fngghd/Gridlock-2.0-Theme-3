@@ -43,6 +43,7 @@ def _get_real_pipeline():
         threshold=float(os.getenv("DETECTION_THRESHOLD", "0.3")),
         use_sam3=os.getenv("PIPELINE_USE_SAM3", "true").lower() != "false",
         use_vlm=os.getenv("PIPELINE_USE_VLM", "true").lower() != "false",
+        use_roboflow=os.getenv("PIPELINE_USE_ROBOFLOW", "true").lower() != "false",
     )
     return Pipeline(cfg)
 

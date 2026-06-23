@@ -40,6 +40,7 @@ from src.utils.logging import REPO_ROOT, log, new_run_id
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp"}
 VEHICLE_CLASSES = {"car", "truck", "bus", "motorcycle"}
+FOUR_WHEELERS = {"car", "truck", "bus"}  # seatbelt only applies to these (not two-wheelers)
 
 SAMPLE_CAMERA_CONFIG = {
     "camera_id": "CAM_DEMO_01",
@@ -60,6 +61,7 @@ class PipelineConfig:
     tier: str = "cloud_required"
     use_sam3: bool = True
     use_vlm: bool = True
+    use_roboflow: bool = False  # reverted — scene-blind per-class FPs; VLM is the arbiter now
 
 
 class Pipeline:
@@ -70,12 +72,29 @@ class Pipeline:
         self.detector = VehicleDetector.for_tier(cfg.tier, threshold=cfg.threshold)
         self.tracker = IoUTracker()
 
-        self.sam3 = None
-        if cfg.use_sam3:
-            from src.modules.sam3_detector import SAM3Detector
-            self.sam3 = SAM3Detector(threshold=0.3)  # lazily spawns the .venv-sam3 worker
+        self.sam3 = None  # legacy local subprocess worker — unused on the hosted path
 
-        self.helmet_triple = HelmetTripleModule(detector=self.detector, sam3=self.sam3)
+        # Roboflow-hosted SAM-3 — open-vocab entity detection for the classes our trained
+        # single-image models can't do well: helmet, triple-riding, stop-line, red-light. The
+        # rules live in sam3_violations.py (ported from the reference notebook). One HTTP call per
+        # image. Gated by use_sam3 + ROBOFLOW_API_KEY presence; degrades gracefully if absent.
+        self.sam3v = None
+        if cfg.use_sam3:
+            from src.modules.roboflow_sam3 import RoboflowSAM3
+            from src.modules.sam3_violations import SAM3Violations
+            rf = RoboflowSAM3()
+            if rf.available():
+                self.sam3v = SAM3Violations(rf)
+
+        # Wrong-side: SAM-3 can't detect a direction/heading attribute, but Roboflow's dedicated
+        # wrong-way model nails it (eval 2/2 + 0/7 FP). Used in place of the weak local classifier.
+        self.rf_wrongside = None
+        if cfg.use_sam3:  # same gate/key as the rest of the hosted-inference path
+            from src.modules.roboflow_detect import RoboflowDetector
+            rfd = RoboflowDetector()
+            self.rf_wrongside = rfd if rfd.available() else None
+
+        self.helmet_triple = HelmetTripleModule(detector=self.detector, sam3=None)
         self.seatbelt = SeatbeltModule()
         self.wrongside = WrongSideModule()
         self.signal = SignalStateClassifier()
@@ -88,7 +107,7 @@ class Pipeline:
             cfg.output_dir, camera_id=scene.camera_id,
             model_versions={"detector": f"rfdetr-{cfg.variant}", "ocr": self.anpr._pref,
                             "tracker": self.tracker.backend,
-                            "sam3": "enabled" if self.sam3 else "disabled",
+                            "sam3": "roboflow-hosted" if self.sam3v else "disabled",
                             "vlm": self.vlm.model if self.vlm and self.vlm.available() else "disabled"},
             scene_config=scene.camera_id)
 
@@ -119,7 +138,6 @@ class Pipeline:
         det = self.detector.detect(work)
         all_dets = det.detections if not det.model_unavailable else []
 
-        ht = self.helmet_triple.analyze(detections=all_dets, frame=work)
         seatbelt = self.seatbelt.analyze(work)
         signal_obs = self._observe_signal(work, all_dets)
 
@@ -127,10 +145,23 @@ class Pipeline:
         geo_note = "abstained: single still has no motion history (needs sequence; see process_clip)"
 
         violations: list[dict] = []
-        self._collect_triple(ht, violations)
-        self._collect_helmet(ht, violations)
+        ht: dict = {}
+        # helmet, triple-riding, stop-line, red-light: SAM-3 entity detection + geometric rules
+        # (one hosted call; see sam3_violations.py). Falls back to the RF-DETR helmet/triple proxy
+        # only if SAM-3 is unavailable. Seatbelt (trained 2-stage) and wrong-side (trained) stay
+        # local — seatbelt already performs well.
+        if self.sam3v is not None and self.sam3v.available():
+            violations.extend(self.sam3v.analyze(work))
+        else:
+            ht = self.helmet_triple.analyze(detections=all_dets, frame=work)
+            self._collect_triple(ht, violations)
+            self._collect_helmet(ht, violations)
         self._collect_seatbelt(seatbelt, all_dets, violations)
-        self._collect_wrongside(work, all_dets, violations)
+        # wrong-side: dedicated Roboflow heading model (2/2+0/7) when available, else weak local.
+        if self.rf_wrongside is not None:
+            self._collect_wrongside_roboflow(work, violations)
+        else:
+            self._collect_wrongside(work, all_dets, violations)
 
         decisions = self.cascade.decide_many(violations)
         for v, d in zip(violations, decisions):
@@ -205,13 +236,31 @@ class Pipeline:
             if not w.get("no_seatbelt"):
                 continue
             wb = w["bbox"]
-            vehicle_bbox = Pipeline._containing_vehicle(wb, all_dets) or wb
+            # Seatbelt only applies to 4-wheelers: require the windshield to sit inside a
+            # car/truck/bus detection. A windshield over a motorbike/scooter (or no vehicle) is a
+            # false positive and is skipped.
+            vehicle_bbox = Pipeline._containing_vehicle(wb, all_dets, classes=FOUR_WHEELERS)
+            if vehicle_bbox is None:
+                continue
             violations.append({
                 "type": "no_seatbelt", "confidence": w["confidence"],
                 "bbox": [wb[0], wb[1], wb[2] - wb[0], wb[3] - wb[1]],
                 "vehicle_bbox": list(vehicle_bbox),
                 "evidence_chain": ["detect_windshield", "classify_belt"],
                 "basis": "yolo11n-windshield + mobilenetv3l-belt (fine-tuned)"})
+
+    def _collect_wrongside_roboflow(self, work, violations: list[dict]) -> None:
+        r = self.rf_wrongside.detect(work, "wrong_side")
+        if r.get("model_unavailable") or not r.get("fired"):
+            return
+        for b in r.get("boxes", []):
+            x1, y1, x2, y2 = [int(round(v)) for v in b["xyxy"]]
+            # Dedicated heading model with 0 FP on samples -> trust its score (may auto-confirm).
+            violations.append({
+                "type": "wrong_side", "confidence": b["confidence"],
+                "bbox": [x1, y1, x2 - x1, y2 - y1], "vehicle_bbox": [x1, y1, x2, y2],
+                "evidence_chain": ["roboflow:wrong-way-driving-detection", "class:wrong-side"],
+                "basis": "roboflow wrong-way-driving-detection/2 (dedicated heading model)"})
 
     def _collect_wrongside(self, work, all_dets, violations: list[dict]) -> None:
         for d in all_dets:
@@ -224,18 +273,20 @@ class Pipeline:
             r = self.wrongside.classify(crop)
             if r.get("model_unavailable") or not r.get("wrong_side"):
                 continue
+            # Single-frame heading from appearance is unreliable (eval: weak recall + false
+            # positives) -> cap to human_review (<0.80) so it never auto-challans; the VLM verifies.
             violations.append({
-                "type": "wrong_side", "confidence": r["confidence"],
+                "type": "wrong_side", "confidence": min(r["confidence"], 0.79),
                 "bbox": [x1, y1, x2 - x1, y2 - y1], "vehicle_bbox": [x1, y1, x2, y2],
                 "evidence_chain": ["detect_vehicle", "classify_heading"],
-                "basis": "mobilenetv3s-ft (single-frame, appearance-based)"})
+                "basis": "mobilenetv3s-ft (single-frame, appearance-based; review-only)"})
 
     @staticmethod
-    def _containing_vehicle(box, all_dets):
+    def _containing_vehicle(box, all_dets, classes=VEHICLE_CLASSES):
         bx1, by1, bx2, by2 = box
         best, best_area = None, 0.0
         for d in all_dets:
-            if d.class_name not in VEHICLE_CLASSES:
+            if d.class_name not in classes:
                 continue
             vx1, vy1, vx2, vy2 = d.xyxy
             ix1, iy1 = max(bx1, vx1), max(by1, vy1)
@@ -261,40 +312,57 @@ class Pipeline:
         If the VLM is unavailable, the model's own band stands (graceful degradation)."""
         if self.vlm is None or not self.vlm.available():
             return
+        # Gather the (violation, crop) pairs that need a VLM opinion, then fire all calls
+        # CONCURRENTLY — a multi-violation image otherwise pays N x the per-call latency
+        # sequentially (each NVIDIA NIM call is network-bound, so threads overlap well).
+        pending = []
         for v in violations:
             if not v.get("needs_vlm"):
                 continue
+            # wrong-side comes from a dedicated heading model (2/2 + 0 FP on samples) that is more
+            # reliable than the VLM, which mis-judges direction from a single frame (it denied a
+            # real wrong-side). Trust the model -> skip VLM for this type so it isn't wrongly killed.
+            if v.get("type") == "wrong_side":
+                v["needs_vlm"] = False
+                continue
             bb = v.get("vehicle_bbox") or v.get("bbox")
-            if not bb:
-                continue
-            crop = self._safe_crop(work, bb)
-            if crop is None:
-                continue
-            r = self.vlm.verify(crop, v["type"])
-            confirmed = r.get("confirmed")
-            band = v.get("band")
-            v["vlm"] = {"model_unavailable": r["model_unavailable"], "confirmed": confirmed,
-                        "vlm_confidence": r.get("vlm_confidence"), "caption": r.get("caption")}
-            if r["model_unavailable"]:
-                v["vlm"]["agreement"] = "vlm_unavailable: model band stands"
-                continue
-            if confirmed is True:
-                # model + VLM agree the violation is real
+            crop = self._safe_crop(work, bb) if bb else None
+            if crop is not None:
+                pending.append((v, crop))
+        if not pending:
+            return
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(4, len(pending))) as ex:
+            results = list(ex.map(lambda pc: self.vlm.verify(pc[1], pc[0]["type"]), pending))
+        for (v, _crop), r in zip(pending, results):
+            self._apply_vlm_result(v, r)
+
+    @staticmethod
+    def _apply_vlm_result(v: dict, r: dict) -> None:
+        """Agreement matrix: auto_confirm survives only if the VLM also confirms; on disagreement
+        we never auto-challan (drop to human_review), and a low-confidence candidate the VLM denies
+        is discarded. VLM-unavailable -> the model's own band stands."""
+        confirmed = r.get("confirmed")
+        band = v.get("band")
+        v["vlm"] = {"model_unavailable": r["model_unavailable"], "confirmed": confirmed,
+                    "vlm_confidence": r.get("vlm_confidence"), "caption": r.get("caption")}
+        if r["model_unavailable"]:
+            v["vlm"]["agreement"] = "vlm_unavailable: model band stands"
+        elif confirmed is True:
+            v["vlm"]["agreement"] = (
+                "agree: model+VLM confirm -> auto_confirm" if band == "auto_confirm"
+                else "agree: VLM confirms -> human_review (still needs sign-off)")
+        elif confirmed is False:
+            if band == "auto_confirm":
+                v["band"] = "human_review"
+                v["needs_vlm"] = False
                 v["vlm"]["agreement"] = (
-                    "agree: model+VLM confirm -> auto_confirm" if band == "auto_confirm"
-                    else "agree: VLM confirms -> human_review (still needs sign-off)")
-            elif confirmed is False:
-                # disagreement -> never auto-challan
-                if band == "auto_confirm":
-                    v["band"] = "human_review"
-                    v["needs_vlm"] = False
-                    v["vlm"]["agreement"] = (
-                        "DISAGREE: model=violation / VLM=no -> auto_confirm downgraded to human_review")
-                else:
-                    v["band"] = "discard"
-                    v["vlm"]["agreement"] = "VLM denies low-confidence candidate -> discard"
+                    "DISAGREE: model=violation / VLM=no -> auto_confirm downgraded to human_review")
             else:
-                v["vlm"]["agreement"] = "vlm_inconclusive: model band stands"
+                v["band"] = "discard"
+                v["vlm"]["agreement"] = "VLM denies low-confidence candidate -> discard"
+        else:
+            v["vlm"]["agreement"] = "vlm_inconclusive: model band stands"
 
     # ---- ROI-gated ANPR --------------------------------------------------
 

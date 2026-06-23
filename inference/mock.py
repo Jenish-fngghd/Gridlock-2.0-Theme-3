@@ -26,9 +26,13 @@ def run(image_bytes: bytes, media_type: str = "image") -> PipelineResult:
         seed = (seed * 6364136223846793005 + 1) & ((1 << 64) - 1)
         return seed % n
 
+    # Synthetic-but-plausible layout (mock mode can't know where objects really are;
+    # in INFERENCE_MODE=real these come from RF-DETR at true positions).
     dets = [
-        Detection("motorcycle", 0.91, {"x": 0.30, "y": 0.40, "w": 0.22, "h": 0.34}),
-        Detection("person", 0.88, {"x": 0.33, "y": 0.18, "w": 0.11, "h": 0.26}),
+        Detection("motorcycle", 0.94, {"x": 0.28, "y": 0.42, "w": 0.26, "h": 0.40}),
+        Detection("person", 0.90, {"x": 0.33, "y": 0.16, "w": 0.13, "h": 0.30}),
+        Detection("person", 0.84, {"x": 0.40, "y": 0.20, "w": 0.12, "h": 0.28}),
+        Detection("number_plate", 0.88, {"x": 0.36, "y": 0.70, "w": 0.12, "h": 0.07}),
     ]
     vtype = _VTYPES[nxt(len(_VTYPES))]
     conf = round(0.55 + nxt(40) / 100.0, 3)

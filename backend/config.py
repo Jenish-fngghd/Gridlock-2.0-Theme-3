@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 
-try:  # load .env for local dev; in prod the process manager supplies env vars
+try:  # .env is the source of truth; override=True lets a redeployed .env update a running
+      # container's settings (process env vars set at container creation otherwise win).
     from dotenv import load_dotenv
 
-    load_dotenv()
+    load_dotenv(override=True)
 except ImportError:
     pass
 

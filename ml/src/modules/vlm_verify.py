@@ -57,10 +57,13 @@ _VIOLATION_QUESTIONS = {
 
 
 class VLMVerifier:
-    def __init__(self, api_key: str | None = None, model: str | None = None, timeout: float = 45.0):
+    def __init__(self, api_key: str | None = None, model: str | None = None,
+                 timeout: float | None = None):
         self.api_key = api_key or os.environ.get("NVIDIA_API_KEY", "")
         self.model = model or os.environ.get("NVIDIA_VLM_MODEL", _DEFAULT_MODEL)
-        self.timeout = timeout
+        # Per-call cap. Calls are fired concurrently (see pipeline._run_vlm_verification), so a
+        # tight ceiling bounds worst-case request latency instead of a slow call hanging it.
+        self.timeout = timeout if timeout is not None else float(os.environ.get("NVIDIA_VLM_TIMEOUT", "20"))
         self._unavailable_reason = "" if self.api_key else "NVIDIA_API_KEY not set"
 
     def available(self) -> bool:
@@ -79,10 +82,21 @@ class VLMVerifier:
             b64 = _encode_image(crop)
             question = _VIOLATION_QUESTIONS.get(
                 violation_type, f"Does this image show a '{violation_type}' traffic violation?")
+            # Skeptical, non-leading prompt — small VLMs sycophantically confirm any leading
+            # yes/no question, so we force a describe-first step, give explicit licence to answer
+            # false, and an out for violations that are impossible for the vehicle type.
             prompt = (
-                f"{question} {extra_context}\n"
-                "Answer in strict JSON only, no markdown: "
-                '{"confirmed": true/false, "confidence": 0.0-1.0, "caption": "one short sentence"}'
+                "You are a strict traffic-enforcement auditor. A wrongful ticket is costly, so confirm "
+                "a violation ONLY if it is clearly and unambiguously visible. When in doubt, answer false. "
+                "Do NOT assume a violation just because you are asked about one.\n"
+                "Step 1 — describe the main vehicle type and what the people are doing, in one short sentence.\n"
+                f"Step 2 — answer this specific question: {question}\n"
+                "Hard rules: a two-wheeler / motorcycle / scooter CANNOT have a seatbelt violation (answer "
+                "false). A vehicle stopped or moving at a signal is NOT 'illegal parking' (answer false). "
+                "If a rider is clearly wearing a helmet, the no-helmet answer is false.\n"
+                f"{extra_context}\n"
+                'Respond strict JSON only, no markdown: {"seen": "<one sentence>", '
+                '"confirmed": true/false, "confidence": 0.0-1.0, "caption": "<one short sentence>"}'
             )
             payload = {
                 "model": self.model,
@@ -93,8 +107,8 @@ class VLMVerifier:
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
                     ],
                 }],
-                "max_tokens": 150,
-                "temperature": 0.1,
+                "max_tokens": 220,
+                "temperature": 0.0,
             }
             resp = requests.post(
                 _NIM_URL,
