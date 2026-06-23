@@ -1,20 +1,33 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Instrument_Sans, Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import Nav from "@/components/Nav";
-import Preloader from "@/components/Preloader";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-const grotesk = Space_Grotesk({
-  variable: "--font-grotesk",
+const instrumentSans = Instrument_Sans({
+  variable: "--font-instrument-sans",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
+});
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+});
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "Gridlock 2.0 — Violation Console",
-  description: "Automated traffic-violation detection, evidence & analytics",
+  title: "Gridlock 2.0 — Traffic Violation Detection",
+  description:
+    "Computer-vision traffic enforcement. Read violations, plates and subject locations from any frame — court-ready in one pass.",
 };
 
 export default function RootLayout({
@@ -23,16 +36,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${grotesk.variable} antialiased`}
+      className={`${instrumentSans.variable} ${instrumentSerif.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="min-h-screen bg-[#f6f7fb] text-slate-900">
-        <div className="mesh" />
-        <Preloader />
-        <div className="flex min-h-screen">
-          <Nav />
-          <main className="flex-1 overflow-x-hidden px-6 py-8 md:px-10">{children}</main>
-        </div>
-      </body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

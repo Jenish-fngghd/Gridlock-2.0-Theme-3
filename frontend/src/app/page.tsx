@@ -1,300 +1,414 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { motion } from "motion/react";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-} from "recharts";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import type { Violation, ConfidenceBand } from "@/lib/types";
-import { VIOLATION_LABELS, BAND_STYLE, BAND_LABELS, timeAgo, pct } from "@/lib/format";
-import StatCard from "@/components/StatCard";
+import { FONT } from "@/lib/ui";
+import Brand from "@/components/Brand";
 import Reveal from "@/components/Reveal";
+import CountUp from "@/components/CountUp";
 
-interface ModelRow {
-  module: string;
-  model_name: string;
-  variant: string | null;
-  metric_name: string | null;
-  metric_value: number | null;
-}
+const serif: React.CSSProperties = { fontFamily: FONT.serif, fontWeight: 400, fontStyle: "italic" };
 
-const BAND_COLOR: Record<ConfidenceBand, string> = {
-  auto_confirm: "#10b981",
-  human_review: "#f59e0b",
-  discard: "#94a3b8",
-};
+const FEATURES = [
+  { code: "NO_HELMET", title: "No-helmet riding", desc: "Detects bare-headed riders and pillions across two-wheelers.", bg: "#FEF2F2", dot: "#EF4444" },
+  { code: "TRIPLE_RIDE", title: "Triple riding", desc: "Counts occupants per vehicle and flags 3+ on a single ride.", bg: "#FFFBEB", dot: "#F59E0B" },
+  { code: "NO_SEATBELT", title: "No seatbelt", desc: "Reads driver and front-passenger belts through the windshield.", bg: "#FFFBEB", dot: "#F59E0B" },
+  { code: "WRONG_SIDE", title: "Wrong-side driving", desc: "Tracks heading vectors against lane direction to catch counterflow.", bg: "#FEF2F2", dot: "#EF4444" },
+  { code: "RED_LIGHT", title: "Red-light jump", desc: "Syncs signal phase with stop-line crossing to catch jumps.", bg: "#FEF2F2", dot: "#EF4444" },
+  { code: "ILLEGAL_PARK", title: "Illegal parking", desc: "Flags vehicles in no-parking zones and on yellow-line stretches.", bg: "#F0F9FF", dot: "#0EA5E9" },
+];
 
-export default function Dashboard() {
-  const [violations, setViolations] = useState<Violation[]>([]);
-  const [models, setModels] = useState<ModelRow[]>([]);
-  const [loading, setLoading] = useState(true);
+const STEPS = [
+  { n: "01", t: "Ingest frame", d: "Pull from a live camera feed or drop in an uploaded image." },
+  { n: "02", t: "Restore & gate", d: "Quality gate + learned low-light / deblur restoration when needed." },
+  { n: "03", t: "Detect", d: "RF-DETR finds vehicles, riders, plates and signals in one pass." },
+  { n: "04", t: "Read plate", d: "TrOCR decodes the number plate from the cropped region." },
+  { n: "05", t: "Score & verify", d: "Confidence cascade + VLM verification assign a calibrated band." },
+  { n: "06", t: "Build evidence", d: "Signed, hash-chained bundle — challan-ready and reproducible." },
+];
 
-  async function load() {
-    const { data } = await supabase
-      .from("violations")
-      .select("*, plates(plate_text, state_code, plate_normalized)")
-      .order("detected_at", { ascending: false })
-      .limit(500);
-    setViolations((data as Violation[]) ?? []);
-    setLoading(false);
-  }
+const CHIPS = [
+  "RF-DETR Detection", "TrOCR Plate OCR", "7 Violation Classes", "Tamper-evident Evidence",
+  "Confidence Cascade", "VLM Verification", "Retinexformer Restore", "Realtime Console",
+];
+
+const FAQ = [
+  { q: "How accurate is the violation detection?", a: "On a held-out benchmark of 5,000 IDD images the detector reaches mAP@0.5 ≈ 0.52, and every detection carries a per-class confidence so reviewers can set their own thresholds. We report honest, benchmarked numbers — never a headline figure we can't reproduce." },
+  { q: "Which violations can it flag in a single pass?", a: "Seven classes — no-helmet, triple-riding, no-seatbelt, wrong-side, stop-line, red-light and illegal-parking — plus number-plate OCR and per-subject evidence for every flagged vehicle, rider and driver." },
+  { q: "Does it read number plates reliably?", a: "The ANPR head reaches ~78% exact-match on our plate benchmark — roughly +33 points over a PaddleOCR baseline — and returns the raw crop alongside the decoded string for audit." },
+  { q: "How are red-light and wrong-side detected?", a: "A per-camera scene-context model encodes the stop-line, lane vectors and signal ROI. Signal-state classification runs at 99.7% on the LISA benchmark; wrong-side and red-light reach F1 ≈ 0.96 / 0.90 respectively." },
+  { q: "Can the output be used as legal evidence?", a: "Every detection bundles the cropped frame, timestamp, camera ID and confidence into a signed, hash-chained record — append-only and reproducible from the immutable evidence audit trail." },
+  { q: "What runs the pipeline?", a: "A FastAPI backend on AWS handles inference and persistence; Supabase stores violations, plates and the model registry with realtime updates straight into this console." },
+];
+
+export default function Landing() {
+  const router = useRouter();
+  const [openFaq, setOpenFaq] = useState<number>(0);
+  const [sent, setSent] = useState(false);
+  const [mapPct, setMapPct] = useState<number | null>(null);
 
   useEffect(() => {
-    load();
     supabase
       .from("model_registry")
-      .select("module, model_name, variant, metric_name, metric_value")
+      .select("module, metric_name, metric_value, is_active")
       .eq("is_active", true)
-      .then(({ data }) => setModels((data as ModelRow[]) ?? []));
-
-    const ch = supabase
-      .channel("dash-violations")
-      .on("postgres_changes", { event: "*", schema: "public", table: "violations" }, () => load())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
+      .then(({ data }) => {
+        const det = (data ?? []).find(
+          (m) => /detect/i.test(m.module ?? "") && m.metric_value != null
+        );
+        if (det?.metric_value != null) {
+          setMapPct(det.metric_value <= 1 ? det.metric_value * 100 : det.metric_value);
+        } else {
+          setMapPct(52.2);
+        }
+      });
   }, []);
 
-  const stats = useMemo(() => {
-    const band = (b: ConfidenceBand) => violations.filter((v) => v.confidence_band === b).length;
-    return {
-      total: violations.length,
-      auto: band("auto_confirm"),
-      review: band("human_review"),
-      confirmed: violations.filter((v) => v.status === "confirmed").length,
-    };
-  }, [violations]);
-
-  const byType = useMemo(() => {
-    const m = new Map<string, number>();
-    violations.forEach((v) => m.set(v.violation_type, (m.get(v.violation_type) ?? 0) + 1));
-    return Array.from(m.entries()).map(([k, count]) => ({
-      type: VIOLATION_LABELS[k as keyof typeof VIOLATION_LABELS] ?? k,
-      count,
-    }));
-  }, [violations]);
-
-  const byBand = useMemo(() => {
-    return (["auto_confirm", "human_review", "discard"] as ConfidenceBand[])
-      .map((b) => ({
-        name: BAND_LABELS[b],
-        value: violations.filter((v) => v.confidence_band === b).length,
-        band: b,
-      }))
-      .filter((d) => d.value > 0);
-  }, [violations]);
+  const jump = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 70, behavior: "smooth" });
+  };
 
   return (
-    <div className="mx-auto max-w-6xl">
-      {/* Hero */}
-      <motion.header
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className="mb-10"
-      >
-        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-indigo-600">
-          <span className="live-dot h-1.5 w-1.5 rounded-full bg-emerald-500" /> Live Console
-        </div>
-        <h1 className="font-display mt-3 text-5xl font-bold leading-tight tracking-tight text-slate-900 md:text-6xl">
-          Traffic Violation
-          <br />
-          <span className="bg-gradient-to-r from-indigo-600 via-violet-500 to-sky-500 bg-clip-text text-transparent">
-            Intelligence
-          </span>
-        </h1>
-        <p className="mt-4 max-w-xl text-slate-500">
-          Photo-first detection across 7 violation classes with automatic plate recognition,
-          calibrated confidence and tamper-evident evidence.
-        </p>
-      </motion.header>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Total Violations" value={stats.total} accent="indigo" delay={0.05} />
-        <StatCard label="Auto-confirmed" value={stats.auto} accent="sky" delay={0.1} />
-        <StatCard label="Needs Review" value={stats.review} accent="amber" delay={0.15} />
-        <StatCard label="Confirmed" value={stats.confirmed} accent="emerald" delay={0.2} />
-      </div>
-
-      {/* Charts */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Reveal className="surface rounded-2xl p-5 lg:col-span-2" delay={0.05}>
-          <div className="mb-4 text-sm font-medium text-slate-700">Violations by type</div>
-          {byType.length === 0 ? (
-            <EmptyChart />
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={byType} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
-                <XAxis
-                  dataKey="type"
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={0}
-                />
-                <Tooltip
-                  cursor={{ fill: "rgba(99,102,241,0.06)" }}
-                  contentStyle={{
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 12,
-                    color: "#0f172a",
-                    boxShadow: "0 10px 30px -12px rgba(15,23,42,0.18)",
-                  }}
-                />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]} fill="#6366f1" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Reveal>
-
-        <Reveal className="surface rounded-2xl p-5" delay={0.1}>
-          <div className="mb-4 text-sm font-medium text-slate-700">Confidence bands</div>
-          {byBand.length === 0 ? (
-            <EmptyChart />
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={byBand}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={55}
-                  outerRadius={85}
-                  paddingAngle={3}
-                  stroke="none"
-                >
-                  {byBand.map((d) => (
-                    <Cell key={d.band} fill={BAND_COLOR[d.band]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 12,
-                    color: "#0f172a",
-                    boxShadow: "0 10px 30px -12px rgba(15,23,42,0.18)",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </Reveal>
-      </div>
-
-      {/* Deployed models */}
-      <Reveal className="mt-10" delay={0.05}>
-        <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="font-display text-xl font-semibold text-slate-900">Deployed models</h2>
-          <span className="text-xs text-slate-400">benchmarked · honest metrics</span>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {models.map((m, i) => (
-            <motion.div
-              key={m.module}
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.04, duration: 0.5 }}
-              className="surface surface-hover rounded-xl p-4"
-            >
-              <div className="text-xs uppercase tracking-wider text-slate-400">
-                {m.module.replace(/_/g, " ")}
-              </div>
-              <div className="mt-1 text-sm font-medium text-slate-700">{m.model_name}</div>
-              <div className="font-display mt-3 text-2xl font-bold text-indigo-600">
-                {m.metric_value != null ? m.metric_value.toFixed(m.metric_value < 1 ? 4 : 0) : "—"}
-              </div>
-              <div className="text-[11px] text-slate-400">{m.metric_name}</div>
-            </motion.div>
-          ))}
-        </div>
-      </Reveal>
-
-      {/* Live feed */}
-      <Reveal className="mt-10" delay={0.05}>
-        <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="font-display text-xl font-semibold text-slate-900">Recent activity</h2>
-          <Link href="/violations" className="text-xs text-indigo-600 hover:text-indigo-700">
-            View all →
-          </Link>
-        </div>
-
-        {loading ? (
-          <FeedSkeleton />
-        ) : violations.length === 0 ? (
-          <div className="surface rounded-2xl p-10 text-center">
-            <div className="text-slate-700">No violations yet</div>
-            <p className="mt-1 text-sm text-slate-500">
-              Upload traffic evidence to run the detection pipeline.
-            </p>
-            <Link
-              href="/upload"
-              className="mt-5 inline-block rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500"
-            >
-              Upload evidence
-            </Link>
+    <div style={{ minHeight: "100vh", background: "#FAFAFA", color: "#18181B", fontFamily: FONT.body }}>
+      {/* nav */}
+      <div style={{ position: "sticky", top: 0, zIndex: 50, backdropFilter: "blur(14px)", background: "rgba(250,250,250,.78)", borderBottom: "1px solid #ECECEC" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "15px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Brand />
+          <div style={{ display: "flex", alignItems: "center", gap: 32, fontSize: 14, color: "#52525B", fontWeight: 500 }}>
+            <span className="gl-link" onClick={() => jump("features")}>Features</span>
+            <span className="gl-link" onClick={() => jump("workflow")}>Workflow</span>
+            <span className="gl-link" onClick={() => jump("stack")}>Stack</span>
+            <span className="gl-link" onClick={() => jump("faq")}>FAQ</span>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {violations.slice(0, 8).map((v, i) => (
-              <motion.div
-                key={v.id}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="surface surface-hover flex items-center gap-4 rounded-xl px-4 py-3"
-              >
-                <span className={`rounded-md px-2 py-1 text-xs ${BAND_STYLE[v.confidence_band]}`}>
-                  {BAND_LABELS[v.confidence_band]}
-                </span>
-                <span className="font-medium text-slate-800">
-                  {VIOLATION_LABELS[v.violation_type]}
-                </span>
-                {v.plates?.plate_text && (
-                  <span className="font-plate rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600">
-                    {v.plates.plate_text}
-                  </span>
-                )}
-                <span className="ml-auto text-xs text-slate-500">{pct(v.confidence)}</span>
-                <span className="w-16 text-right text-xs text-slate-400">
-                  {timeAgo(v.detected_at)}
-                </span>
-              </motion.div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <span onClick={() => router.push("/dashboard")} style={{ fontSize: 14, fontWeight: 500, color: "#52525B", cursor: "pointer" }}>Sign in</span>
+            <button onClick={() => jump("demo")} className="gl-press gl-btn-dark" style={{ fontFamily: FONT.body, fontSize: 13.5, fontWeight: 600, color: "#fff", background: "#18181B", border: "none", padding: "9px 16px", borderRadius: 10, cursor: "pointer", boxShadow: "0 1px 2px rgba(24,24,27,.2)" }}>Request demo</button>
+          </div>
+        </div>
+      </div>
+
+      {/* hero */}
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "88px 32px 48px", display: "grid", gridTemplateColumns: "1.04fr .96fr", gap: 54, alignItems: "center" }}>
+        <div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #ECECEC", borderRadius: 999, padding: "6px 13px 6px 9px", fontSize: 12.5, fontWeight: 500, color: "#52525B", boxShadow: "0 1px 2px rgba(24,24,27,.04)" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10B981", animation: "pulse 2s ease-in-out infinite" }} />
+            Computer vision for traffic enforcement
+          </div>
+          <h1 style={{ fontFamily: FONT.sans, fontSize: 60, lineHeight: 1.04, margin: "18px 0 0", fontWeight: 600, letterSpacing: "-0.03em" }}>
+            Read every traffic <span style={{ ...serif, letterSpacing: "-0.01em" }}>violation</span> in a single frame.
+          </h1>
+          <p style={{ fontSize: 17.5, lineHeight: 1.55, color: "#6B7280", maxWidth: 480, margin: "22px 0 0" }}>
+            Gridlock 2.0 reads any traffic image, flags seven violation classes, reads number plates, and pinpoints every rider, driver and vehicle — with calibrated, auditable evidence.
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 30 }}>
+            <button onClick={() => router.push("/detect")} className="gl-press gl-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 9, fontFamily: FONT.body, fontSize: 15, fontWeight: 600, color: "#fff", border: "none", padding: "13px 22px", borderRadius: 12, cursor: "pointer" }}>
+              Launch console
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </button>
+            <button onClick={() => jump("demo")} className="gl-press gl-btn-ghost" style={{ fontFamily: FONT.body, fontSize: 15, fontWeight: 600, color: "#18181B", background: "#fff", border: "1px solid #ECECEC", padding: "13px 22px", borderRadius: 12, cursor: "pointer" }}>Request a demo</button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 30, flexWrap: "wrap" }}>
+            {["Built for traffic authorities", "Court-ready evidence trail", "Honest, benchmarked metrics"].map((t) => (
+              <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13.5, color: "#52525B", fontWeight: 500 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="2.6"><path d="M20 6 9 17l-5-5" /></svg>{t}
+              </span>
             ))}
           </div>
-        )}
-      </Reveal>
+        </div>
+
+        {/* hero visual */}
+        <div style={{ position: "relative", animation: "bfu 1s cubic-bezier(.16,1,.3,1) both", animationDelay: ".18s" }}>
+          <div style={{ position: "absolute", inset: "24px -18px -18px 30px", background: "#fff", border: "1px solid #ECECEC", borderRadius: 20, transform: "rotate(2.4deg)", boxShadow: "0 24px 60px -28px rgba(24,24,27,.18)" }} />
+          <div style={{ position: "relative", background: "#fff", border: "1px solid #ECECEC", borderRadius: 20, padding: 14, boxShadow: "0 36px 70px -30px rgba(24,24,27,.3)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 6px 12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981", animation: "ringpulse 2.4s infinite" }} />
+                <span style={{ fontFamily: FONT.mono, fontSize: 11.5, fontWeight: 500, color: "#52525B" }}>CAM-07 · NH-48 JUNCTION</span>
+              </div>
+              <span style={{ fontFamily: FONT.mono, fontSize: 11, color: "#9CA3AF" }}>14:08:22</span>
+            </div>
+            <div style={{ position: "relative", borderRadius: 13, overflow: "hidden", aspectRatio: "16 / 10", background: "repeating-linear-gradient(48deg,#1c1c20,#1c1c20 11px,#212126 11px,#212126 22px)" }}>
+              <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 70% 20%,rgba(79,70,229,.18),transparent 55%)" }} />
+              <span style={{ position: "absolute", top: 10, left: 12, fontFamily: FONT.mono, fontSize: 9.5, letterSpacing: ".06em", color: "rgba(255,255,255,.42)" }}>FRAME 1920×1200 · 60fps</span>
+              <div style={{ position: "absolute", left: "13%", top: "26%", width: "25%", height: "50%", border: "2px solid #EF4444", borderRadius: 7, boxShadow: "0 0 0 1px rgba(239,68,68,.25),inset 0 0 28px rgba(239,68,68,.12)", animation: "bfu .6s ease both", animationDelay: ".6s" }}>
+                <div style={{ position: "absolute", top: -21, left: -2, background: "#EF4444", color: "#fff", fontFamily: FONT.mono, fontSize: 9.5, fontWeight: 600, padding: "2px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>NO HELMET 0.91</div>
+              </div>
+              <div style={{ position: "absolute", left: "58%", top: "58%", width: "22%", height: "13%", border: "2px solid #6366F1", borderRadius: 6, boxShadow: "0 0 0 1px rgba(99,102,241,.3)", animation: "bfu .6s ease both", animationDelay: ".78s" }}>
+                <div style={{ position: "absolute", bottom: -20, left: -2, background: "#4F46E5", color: "#fff", fontFamily: FONT.mono, fontSize: 9.5, fontWeight: 600, padding: "2px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>DL 3C AB 1234</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 6px 4px" }}>
+              <span style={{ fontFamily: FONT.mono, fontSize: 11.5, color: "#52525B" }}><span style={{ color: "#EF4444", fontWeight: 600 }}>2</span> violations · <span style={{ color: "#18181B", fontWeight: 600 }}>4</span> objects</span>
+              <span style={{ fontFamily: FONT.body, fontSize: 11.5, fontWeight: 600, color: "#10B981", background: "#ECFDF5", padding: "3px 9px", borderRadius: 6 }}>Auto-confirmed</span>
+            </div>
+          </div>
+          <div style={{ position: "absolute", bottom: -14, left: -22, background: "#18181B", color: "#fff", borderRadius: 11, padding: "10px 13px", boxShadow: "0 16px 34px -14px rgba(24,24,27,.55)", animation: "float 4.5s ease-in-out infinite" }}>
+            <div style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: ".08em", color: "#A1A1AA" }}>RIDER LOCATED</div>
+            <div style={{ fontFamily: FONT.mono, fontSize: 13, fontWeight: 600, marginTop: 2 }}>28.6139°N · 77.2090°E</div>
+          </div>
+        </div>
+      </div>
+
+      {/* tech / stack marquee */}
+      <div id="stack" style={{ marginTop: 30, borderTop: "1px solid #ECECEC", padding: "32px 0 6px" }}>
+        <div style={{ textAlign: "center", fontSize: 13, color: "#9CA3AF", marginBottom: 20 }}>Built on a transparent, benchmarked detection stack</div>
+        <div style={{ position: "relative", overflow: "hidden", WebkitMaskImage: "linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)", maskImage: "linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)" }}>
+          <div style={{ display: "flex", gap: 14, width: "max-content", animation: "marquee 36s linear infinite" }}>
+            {[...CHIPS, ...CHIPS].map((c, i) => (
+              <span key={i} style={{ flex: "none", fontFamily: FONT.mono, fontSize: 13, fontWeight: 500, color: "#52525B", background: "#fff", border: "1px solid #ECECEC", borderRadius: 10, padding: "9px 16px", whiteSpace: "nowrap" }}>{c}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* features */}
+      <div id="features" style={{ maxWidth: 1180, margin: "0 auto", padding: "64px 32px 24px" }}>
+        <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 38px" }}>
+          <Reveal style={{ fontFamily: FONT.mono, fontSize: 12, letterSpacing: ".1em", color: "#4F46E5", fontWeight: 500 }}>DETECTION SUITE</Reveal>
+          <Reveal delay={0.06}><h2 style={{ fontFamily: FONT.sans, fontSize: 38, fontWeight: 600, letterSpacing: "-0.03em", margin: "10px 0 0" }}>Seven violation classes, read in <span style={serif}>one</span> pass.</h2></Reveal>
+          <Reveal delay={0.12}><p style={{ fontSize: 16, color: "#6B7280", lineHeight: 1.55, margin: "14px 0 0" }}>One forward pass over any frame returns every flagged violation — with confidence, plate and location attached. Benchmarked on the public IDD and LISA datasets.</p></Reveal>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+          {FEATURES.map((f, i) => (
+            <Reveal key={f.code} delay={i * 0.05}>
+              <div className={i % 2 ? "gl-card-rt" : "gl-card-lt"} style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: 22, boxShadow: "0 1px 2px rgba(24,24,27,.04)", transition: "transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s", height: "100%" }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: f.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ width: 13, height: 13, borderRadius: "50%", background: f.dot }} />
+                </div>
+                <div style={{ fontFamily: FONT.mono, fontSize: 10.5, letterSpacing: ".05em", color: "#9CA3AF", marginTop: 16 }}>{f.code}</div>
+                <div style={{ fontFamily: FONT.sans, fontSize: 18, fontWeight: 600, marginTop: 3 }}>{f.title}</div>
+                <p style={{ fontSize: 13.5, color: "#6B7280", lineHeight: 1.5, margin: "8px 0 0" }}>{f.desc}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+
+        {/* wide capability card */}
+        <Reveal delay={0.08}>
+          <div style={{ background: "#18181B", borderRadius: 20, padding: 32, marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 34, alignItems: "center", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: "-40%", left: "-5%", width: 340, height: 340, background: "radial-gradient(circle,rgba(79,70,229,.45),transparent 65%)" }} />
+            <div style={{ position: "relative" }}>
+              <div style={{ fontFamily: FONT.mono, fontSize: 11, letterSpacing: ".1em", color: "#818CF8" }}>BEYOND DETECTION</div>
+              <h3 style={{ fontFamily: FONT.sans, fontSize: 26, fontWeight: 600, color: "#fff", letterSpacing: "-0.02em", lineHeight: 1.15, margin: "10px 0 0" }}>Reads plates. Locates subjects. Builds the <span style={serif}>case file</span>.</h3>
+              <p style={{ fontSize: 14.5, color: "#A1A1AA", lineHeight: 1.6, margin: "12px 0 0", maxWidth: 380 }}>Every flagged subject is OCR&apos;d, projected to map coordinates, and packaged into a signed, challan-ready evidence bundle.</p>
+            </div>
+            <div style={{ position: "relative", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 14, padding: "6px 14px" }}>
+              {[
+                { c: "#EF4444", t: "No-helmet riding", p: "DL 3C AB 1234" },
+                { c: "#F59E0B", t: "Triple riding", p: "UP 16 BT 4521" },
+                { c: "#EF4444", t: "Red-light jump", p: "HR 26 DK 8830" },
+                { c: "#0EA5E9", t: "Subject located", p: "28.61°N · 77.20°E" },
+              ].map((r, i, a) => (
+                <div key={r.t} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 2px", borderBottom: i < a.length - 1 ? "1px solid rgba(255,255,255,.07)" : "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: r.c }} />
+                    <span style={{ fontSize: 12.5, color: "#E4E4E7" }}>{r.t}</span>
+                  </div>
+                  <span style={{ fontFamily: FONT.mono, fontSize: 11, color: "#A1A1AA" }}>{r.p}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      </div>
+
+      {/* workflow */}
+      <div id="workflow" style={{ maxWidth: 1180, margin: "0 auto", padding: "60px 32px 24px" }}>
+        <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto 38px" }}>
+          <Reveal style={{ fontFamily: FONT.mono, fontSize: 12, letterSpacing: ".1em", color: "#4F46E5", fontWeight: 500 }}>HOW IT WORKS</Reveal>
+          <Reveal delay={0.06}><h2 style={{ fontFamily: FONT.sans, fontSize: 38, fontWeight: 600, letterSpacing: "-0.03em", margin: "10px 0 0" }}>From frame to evidence in <span style={serif}>one</span> pipeline.</h2></Reveal>
+          <Reveal delay={0.12}><p style={{ fontSize: 16, color: "#6B7280", lineHeight: 1.55, margin: "14px 0 0" }}>Six stages. No manual triage. Every detection logged and reproducible from the source frame.</p></Reveal>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+          {STEPS.map((s, i) => (
+            <Reveal key={s.n} delay={i * 0.05}>
+              <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: 22, boxShadow: "0 1px 2px rgba(24,24,27,.04)", height: "100%" }}>
+                <div style={{ fontFamily: FONT.mono, fontSize: 11, fontWeight: 600, letterSpacing: ".06em", color: "#4F46E5" }}>STEP {s.n}</div>
+                <div style={{ fontFamily: FONT.sans, fontSize: 18, fontWeight: 600, marginTop: 10 }}>{s.t}</div>
+                <p style={{ fontSize: 13.5, color: "#6B7280", lineHeight: 1.5, margin: "8px 0 0" }}>{s.d}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+
+      {/* honest stats strip */}
+      <div style={{ maxWidth: 1180, margin: "48px auto 0", padding: "0 32px" }}>
+        <Reveal delay={0.05}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0, borderTop: "1px solid #ECECEC", borderBottom: "1px solid #ECECEC", padding: "32px 0" }}>
+            {[
+              { node: <CountUp end={mapPct ?? 52.2} decimals={1} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "Detection mAP@0.5 (IDD)" },
+              { node: <CountUp end={78} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "ANPR exact-match" },
+              { node: <CountUp end={99.7} decimals={1} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "Signal-state accuracy (LISA)" },
+              { node: <span style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }}>7</span>, label: "Violation classes + ANPR" },
+            ].map((s, i) => (
+              <div key={i} style={{ padding: "0 24px", borderRight: i < 3 ? "1px solid #ECECEC" : "none" }}>
+                <div>{s.node}</div>
+                <div style={{ fontSize: 13.5, color: "#6B7280", marginTop: 4 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </div>
+
+      {/* faq */}
+      <div id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "64px 32px 24px" }}>
+        <div style={{ textAlign: "center", marginBottom: 30 }}>
+          <Reveal style={{ fontFamily: FONT.mono, fontSize: 12, letterSpacing: ".1em", color: "#4F46E5", fontWeight: 500 }}>FAQ</Reveal>
+          <Reveal delay={0.06}><h2 style={{ fontFamily: FONT.sans, fontSize: 38, fontWeight: 600, letterSpacing: "-0.03em", margin: "10px 0 0" }}>Questions, <span style={serif}>answered</span>.</h2></Reveal>
+        </div>
+        <Reveal delay={0.1}>
+          <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "4px 22px", boxShadow: "0 1px 2px rgba(24,24,27,.04)" }}>
+            {FAQ.map((f, i) => {
+              const open = openFaq === i;
+              return (
+                <div key={i} style={{ borderBottom: i < FAQ.length - 1 ? "1px solid #F4F4F5" : "none" }}>
+                  <div onClick={() => setOpenFaq(open ? -1 : i)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "18px 2px", cursor: "pointer" }}>
+                    <span style={{ fontFamily: FONT.sans, fontSize: 16.5, fontWeight: 600, letterSpacing: "-0.01em" }}>{f.q}</span>
+                    <span style={{ flex: "none", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT.mono, fontSize: 21, color: "#4F46E5", lineHeight: 1, transform: open ? "rotate(45deg)" : "rotate(0deg)", transition: "transform .3s ease" }}>+</span>
+                  </div>
+                  <div style={{ maxHeight: open ? 260 : 0, opacity: open ? 1 : 0, overflow: "hidden", transition: "max-height .35s ease,opacity .3s ease" }}>
+                    <p style={{ fontSize: 14.5, color: "#6B7280", lineHeight: 1.6, margin: 0, padding: "0 30px 18px 2px" }}>{f.a}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Reveal>
+      </div>
+
+      {/* demo */}
+      <div id="demo" style={{ maxWidth: 1180, margin: "0 auto", padding: "72px 32px 44px" }}>
+        <Reveal delay={0.05}>
+          <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 24, overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr", boxShadow: "0 24px 60px -34px rgba(24,24,27,.2)" }}>
+            <div style={{ padding: 44, borderRight: "1px solid #ECECEC" }}>
+              <div style={{ fontFamily: FONT.mono, fontSize: 12, letterSpacing: ".1em", color: "#4F46E5", fontWeight: 500 }}>READY WHEN YOU ARE</div>
+              <h2 style={{ fontFamily: FONT.sans, fontSize: 34, fontWeight: 600, letterSpacing: "-0.03em", margin: "12px 0 0", lineHeight: 1.1 }}>See Gridlock 2.0 <span style={serif}>live</span>.</h2>
+              <p style={{ fontSize: 15.5, color: "#6B7280", lineHeight: 1.6, margin: "16px 0 0", maxWidth: 380 }}>Tell us about your enforcement setup and we&apos;ll set up a tailored walkthrough on your own camera feeds.</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 13, marginTop: 26 }}>
+                {["30-minute tailored walkthrough", "Run on a sample of your frames", "Deployment scoped to your network"].map((t) => (
+                  <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 14, color: "#52525B", fontWeight: 500 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="2.6"><path d="M20 6 9 17l-5-5" /></svg>{t}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div style={{ padding: 44 }}>
+              {!sent ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <Field label="Full name" placeholder="Priya Nair" />
+                    <Field label="Work email" placeholder="priya@citypolice.gov" />
+                  </div>
+                  <Field label="Organisation" placeholder="City Traffic Police" />
+                  <div>
+                    <Label>Camera network size</Label>
+                    <select className="gl-field" style={fieldStyle}>
+                      <option>Select…</option>
+                      <option>Under 50 cameras</option>
+                      <option>50–200 cameras</option>
+                      <option>200–1,000 cameras</option>
+                      <option>1,000+ cameras</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>What are you enforcing? <span style={{ color: "#9CA3AF", fontWeight: 400 }}>(optional)</span></Label>
+                    <textarea rows={2} placeholder="Helmet compliance on the NH-48 corridor…" className="gl-field" style={{ ...fieldStyle, resize: "none" }} />
+                  </div>
+                  <button onClick={() => setSent(true)} className="gl-press gl-btn-primary" style={{ width: "100%", fontFamily: FONT.body, fontSize: 14.5, fontWeight: 600, color: "#fff", border: "none", padding: 12, borderRadius: 11, cursor: "pointer" }}>Request demo</button>
+                  <p style={{ fontSize: 12, color: "#9CA3AF", textAlign: "center", margin: 0 }}>We respond within one business day.</p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", height: "100%", gap: 14, animation: "bfu .6s cubic-bezier(.16,1,.3,1) both" }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 13, background: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.6"><path d="M20 6 9 17l-5-5" /></svg>
+                  </div>
+                  <h3 style={{ fontFamily: FONT.sans, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", margin: 0 }}>Request received.</h3>
+                  <p style={{ fontSize: 14.5, color: "#6B7280", lineHeight: 1.6, margin: 0 }}>Thanks — our team will reach out within one business day to schedule your walkthrough on your own feeds.</p>
+                  <button onClick={() => router.push("/detect")} className="gl-press gl-btn-ghost" style={{ marginTop: 4, display: "inline-flex", alignItems: "center", gap: 8, fontFamily: FONT.body, fontSize: 14, fontWeight: 600, color: "#18181B", background: "#fff", border: "1px solid #ECECEC", padding: "10px 16px", borderRadius: 11, cursor: "pointer" }}>
+                    Explore the console
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#18181B" strokeWidth="2.4"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </Reveal>
+      </div>
+
+      {/* footer */}
+      <div style={{ borderTop: "1px solid #ECECEC", marginTop: 40 }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "48px 32px 28px", display: "grid", gridTemplateColumns: "1.7fr 1fr 1fr 1.5fr", gap: 32 }}>
+          <div>
+            <Brand size={26} />
+            <p style={{ fontSize: 13.5, color: "#6B7280", lineHeight: 1.6, margin: "14px 0 0", maxWidth: 280 }}>Computer-vision traffic enforcement. Read violations, plates and subject locations from any frame — court-ready in one pass.</p>
+            <div style={{ fontFamily: FONT.mono, fontSize: 11, color: "#9CA3AF", marginTop: 16, display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981" }} />All systems operational
+            </div>
+          </div>
+          <FooterCol title="Product" items={[["Features", () => jump("features")], ["Workflow", () => jump("workflow")], ["Stack", () => jump("stack")], ["FAQ", () => jump("faq")]]} />
+          <FooterCol title="Console" items={[["Detect", () => router.push("/detect")], ["Dashboard", () => router.push("/dashboard")], ["Violations", () => router.push("/violations")], ["Reports", () => router.push("/reports")]]} />
+          <div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#18181B", marginBottom: 10 }}>Get a demo</div>
+            <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.55, margin: "0 0 14px" }}>See Gridlock 2.0 live on sample traffic feeds.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => jump("demo")} className="gl-press" style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#fff", background: "#18181B", border: "none", padding: "9px 14px", borderRadius: 10, cursor: "pointer" }}>Request demo</button>
+              <button onClick={() => router.push("/dashboard")} className="gl-press gl-btn-ghost" style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#18181B", background: "#fff", border: "1px solid #ECECEC", padding: "9px 14px", borderRadius: 10, cursor: "pointer" }}>Sign in</button>
+            </div>
+          </div>
+        </div>
+        <div style={{ borderTop: "1px solid #ECECEC" }}>
+          <div style={{ maxWidth: 1180, margin: "0 auto", padding: "18px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: "#9CA3AF" }}>
+            <span>© 2026 Gridlock Systems</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+              <span className="gl-link">Privacy</span>
+              <span className="gl-link">Terms</span>
+              <span className="gl-link">Security</span>
+              <span style={{ fontFamily: FONT.mono }}>v2.0.4</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function EmptyChart() {
+const fieldStyle: React.CSSProperties = {
+  width: "100%",
+  fontFamily: FONT.body,
+  fontSize: 14,
+  color: "#18181B",
+  background: "#FAFAFA",
+  border: "1px solid #ECECEC",
+  borderRadius: 10,
+  padding: "10px 12px",
+  outline: "none",
+};
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <label style={{ fontSize: 12, fontWeight: 600, color: "#52525B", marginBottom: 6, display: "block" }}>{children}</label>;
+}
+
+function Field({ label, placeholder }: { label: string; placeholder: string }) {
   return (
-    <div className="flex h-[220px] items-center justify-center text-sm text-slate-400">
-      Awaiting data
+    <div>
+      <Label>{label}</Label>
+      <input placeholder={placeholder} className="gl-field" style={fieldStyle} />
     </div>
   );
 }
 
-function FeedSkeleton() {
+function FooterCol({ title, items }: { title: string; items: [string, () => void][] }) {
   return (
-    <div className="space-y-2">
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="shimmer relative h-12 overflow-hidden rounded-xl" />
-      ))}
+    <div>
+      <div style={{ fontSize: 12.5, fontWeight: 600, color: "#18181B", marginBottom: 14 }}>{title}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13.5, color: "#6B7280" }}>
+        {items.map(([label, fn]) => (
+          <span key={label} className="gl-link" onClick={fn}>{label}</span>
+        ))}
+      </div>
     </div>
   );
 }

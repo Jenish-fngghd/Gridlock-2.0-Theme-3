@@ -24,6 +24,7 @@ export interface Violation {
   detected_at: string;
   annotated_image_path: string | null;
   evidence: Record<string, unknown>;
+  sha256_evidence: string | null;
   vlm_caption: string | null;
   plate_id: string | null;
   created_at: string;
