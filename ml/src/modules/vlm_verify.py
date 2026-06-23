@@ -1,9 +1,11 @@
 """Module 6 — VLM verify (00_master_design.md §6, confidence-cascade escalation only).
 
-Calls a hosted vision-language model ONLY for violations the confidence cascade has flagged
-`needs_vlm` (the `human_review` band) — i.e. rare, borderline cases, never every image. This
-keeps cost minimal: the cheap local models (RF-DETR/MobileNet/TrOCR/SAM-3-crop/HSV) do the bulk
-of the work, and the VLM is a second opinion only when they're uncertain.
+Calls a hosted vision-language model for violations the confidence cascade flagged `needs_vlm`
+— now BOTH the `human_review` band (tiebreaker on uncertain cases) AND the `auto_confirm` band
+(an agreement-gate cross-check before any auto-challan; see pipeline._run_vlm_verification).
+It is still never called on every image — only on the rare frames that produced an actual
+violation candidate, so the cheap local models (RF-DETR/MobileNet/TrOCR/SAM-3-crop/HSV) do the
+bulk of the work and the VLM is a second opinion that must AGREE before a violation auto-confirms.
 
 Provider: NVIDIA NIM (build.nvidia.com) — OpenAI-compatible chat-completions API with an
 image-capable model (meta/llama-3.2-11b-vision-instruct by default). Needs NVIDIA_API_KEY in
@@ -43,7 +45,9 @@ def _encode_image(image) -> str:
 
 _VIOLATION_QUESTIONS = {
     "helmet": "Is the motorcycle rider in this image NOT wearing a helmet?",
+    "no_helmet": "Is the motorcycle rider in this image NOT wearing a helmet?",
     "triple_riding": "Are there 3 or more people riding on this one motorcycle/bike?",
+    "seatbelt": "Is the driver/occupant in this image NOT wearing a seatbelt?",
     "no_seatbelt": "Is the driver/occupant in this image NOT wearing a seatbelt?",
     "wrong_side": "Is this vehicle driving on the wrong side of the road (facing oncoming traffic)?",
     "red_light": "Is this vehicle crossing a red traffic light?",

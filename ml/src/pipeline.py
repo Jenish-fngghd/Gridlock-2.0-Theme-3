@@ -255,6 +255,10 @@ class Pipeline:
     # ---- confidence-cascade VLM escalation -------------------------------
 
     def _run_vlm_verification(self, work, violations: list[dict]) -> None:
+        """Agreement-gate: a violation may only AUTO-CONFIRM (auto-challan) when the specialized
+        model AND the VLM agree it's real. On disagreement we never auto-challan — auto_confirm
+        drops to human_review, and an already-uncertain human_review candidate is discarded.
+        If the VLM is unavailable, the model's own band stands (graceful degradation)."""
         if self.vlm is None or not self.vlm.available():
             return
         for v in violations:
@@ -267,13 +271,30 @@ class Pipeline:
             if crop is None:
                 continue
             r = self.vlm.verify(crop, v["type"])
-            v["vlm"] = {"model_unavailable": r["model_unavailable"], "confirmed": r.get("confirmed"),
+            confirmed = r.get("confirmed")
+            band = v.get("band")
+            v["vlm"] = {"model_unavailable": r["model_unavailable"], "confirmed": confirmed,
                         "vlm_confidence": r.get("vlm_confidence"), "caption": r.get("caption")}
-            if not r["model_unavailable"] and r.get("confirmed") is False:
-                v["band"] = "discard"
-                v["vlm"]["override"] = "VLM denied -> downgraded to discard"
-            elif not r["model_unavailable"] and r.get("confirmed") is True:
-                v["vlm"]["override"] = "VLM confirmed -> stays human_review (still needs sign-off)"
+            if r["model_unavailable"]:
+                v["vlm"]["agreement"] = "vlm_unavailable: model band stands"
+                continue
+            if confirmed is True:
+                # model + VLM agree the violation is real
+                v["vlm"]["agreement"] = (
+                    "agree: model+VLM confirm -> auto_confirm" if band == "auto_confirm"
+                    else "agree: VLM confirms -> human_review (still needs sign-off)")
+            elif confirmed is False:
+                # disagreement -> never auto-challan
+                if band == "auto_confirm":
+                    v["band"] = "human_review"
+                    v["needs_vlm"] = False
+                    v["vlm"]["agreement"] = (
+                        "DISAGREE: model=violation / VLM=no -> auto_confirm downgraded to human_review")
+                else:
+                    v["band"] = "discard"
+                    v["vlm"]["agreement"] = "VLM denies low-confidence candidate -> discard"
+            else:
+                v["vlm"]["agreement"] = "vlm_inconclusive: model band stands"
 
     # ---- ROI-gated ANPR --------------------------------------------------
 

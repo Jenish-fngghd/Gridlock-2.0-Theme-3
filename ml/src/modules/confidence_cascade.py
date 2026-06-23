@@ -60,9 +60,12 @@ class ConfidenceCascade:
         auto, floor = self.thresholds.get(vtype, (0.85, 0.50))
         cal = self._calibrate(vtype, float(confidence))
         if cal >= auto:
-            band, needs_vlm = AUTO_CONFIRM, False
+            # High model confidence — but still VLM-cross-check before auto-challan. The pipeline
+            # only KEEPS auto_confirm if the VLM agrees (agreement-gate); on disagreement it drops
+            # to human_review. We never auto-challan on a single model's say-so.
+            band, needs_vlm = AUTO_CONFIRM, True
         elif cal >= floor:
-            band, needs_vlm = HUMAN_REVIEW, True   # escalate uncertain cases to VLM
+            band, needs_vlm = HUMAN_REVIEW, True   # escalate uncertain cases to VLM (tiebreaker)
         else:
             band, needs_vlm = DISCARD, False
         return CascadeDecision(vtype, round(float(confidence), 4), round(cal, 4), band, needs_vlm,
