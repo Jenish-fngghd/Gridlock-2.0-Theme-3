@@ -6,6 +6,7 @@ import { processFile, type ProcessResult, type Detection, BACKEND_URL } from "@/
 import { VIOLATION_LABELS, pct } from "@/lib/format";
 import { FONT, severityFor, SEVERITY_COLOR, boxColor, prettyClass } from "@/lib/ui";
 import type { ViolationType } from "@/lib/types";
+import GradientGridBg from "@/components/GradientGridBg";
 
 type Phase = "idle" | "processing" | "result" | "error";
 
@@ -97,18 +98,24 @@ export default function DetectPage() {
 
   const detections: Detection[] = result?.detections ?? [];
   const annotated = result?.annotated_image_url ?? null;
-  const displaySrc = frameSrc ?? annotated;
-  const drawBoxes = isResult && frameSrc != null && detections.length > 0;
+  // Prefer the server-rendered evidence image when a violation was found — it already has the
+  // violation's own box + label burned in (same image the Violations page shows), which the
+  // client-side overlay below can't reproduce since it only has the generic object detections,
+  // not the violation-specific bbox. Without this, the violation box only ever showed up after
+  // navigating to /violations.
+  const displaySrc = annotated ?? frameSrc;
+  const drawBoxes = isResult && frameSrc != null && annotated == null && detections.length > 0;
   const plate = result?.violations.find((v) => v.plate)?.plate ?? null;
   const objCount = detections.length;
   const vCount = result?.violations.length ?? 0;
 
   return (
-    <div style={{ padding: "30px 36px 48px", maxWidth: 1180, margin: "0 auto" }}>
+    <div style={{ position: "relative", overflow: "hidden", background: "#fff" }}>
+      <GradientGridBg side="right" />
+      <div style={{ position: "relative", zIndex: 1, padding: "30px 36px 48px", maxWidth: 1180, margin: "0 auto" }}>
       {phase === "idle" && (
-        <div style={{ position: "relative", overflow: "hidden", borderRadius: 24 }}>
-          <div aria-hidden style={{ position: "absolute", inset: "-25% -12%", zIndex: 0, pointerEvents: "none", background: "radial-gradient(38% 48% at 18% 28%,rgba(79,70,229,.16),transparent 70%),radial-gradient(34% 42% at 82% 22%,rgba(14,165,233,.13),transparent 70%),radial-gradient(44% 50% at 62% 88%,rgba(139,92,246,.13),transparent 70%)", filter: "blur(10px)", animation: "meshdrift 16s ease-in-out infinite" }} />
-          <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 780, margin: "0 auto", padding: "30px 20px 12px" }}>
+        <div>
+          <div style={{ textAlign: "center", maxWidth: 780, margin: "0 auto", padding: "30px 20px 12px" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #ECECEC", borderRadius: 999, padding: "6px 13px 6px 9px", fontSize: 12.5, fontWeight: 500, color: "#52525B", boxShadow: "0 1px 2px rgba(24,24,27,.04)", animation: "wordup .6s cubic-bezier(.16,1,.3,1) both" }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10B981", animation: "pulse 2s ease-in-out infinite" }} />
               Live vision model · RF-DETR + TrOCR
@@ -118,7 +125,7 @@ export default function DetectPage() {
               <span style={{ background: "linear-gradient(90deg,#4F46E5,#0EA5E9,#8B5CF6,#10B981,#4F46E5)", backgroundSize: "300% auto", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", animation: "shine 5s linear infinite" }}>frame</span>
             </h1>
             <p style={{ fontSize: 16.5, lineHeight: 1.55, color: "#6B7280", maxWidth: 520, margin: "18px auto 0" }}>
-              Upload a traffic frame — Gridlock runs the full pipeline, reads plates and flags every violation in a single pass.
+              Upload a traffic frame — Team Padlock runs the full pipeline, reads plates and flags every violation in a single pass.
             </p>
 
             <div
@@ -399,6 +406,7 @@ export default function DetectPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

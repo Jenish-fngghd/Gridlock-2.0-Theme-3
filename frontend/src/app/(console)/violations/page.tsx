@@ -32,18 +32,6 @@ type Filter = "All" | "Critical" | "High" | "Pending";
 const FILTERS: Filter[] = ["All", "Critical", "High", "Pending"];
 const COLS = "96px 1.3fr 130px 1fr 90px 100px 110px";
 
-const BUCKETS = [
-  { key: "vehicle", label: "Vehicle", kw: ["car", "motorcycle", "motorbike", "bike", "truck", "bus", "auto", "vehicle", "scooter"] },
-  { key: "plate",   label: "Plate",   kw: ["plate", "license", "licence", "anpr", "number"] },
-  { key: "rider",   label: "Rider",   kw: ["person", "rider", "driver", "pedestrian", "passenger", "pillion"] },
-  { key: "helmet",  label: "Helmet",  kw: ["helmet"] },
-];
-function bucketOf(label: string): string {
-  const low = label.toLowerCase();
-  for (const b of BUCKETS) if (b.kw.some(k => low.includes(k))) return b.key;
-  return "other";
-}
-
 function vioCode(id: string) {
   return "VIO-" + id.replace(/-/g, "").slice(0, 6).toUpperCase();
 }
@@ -217,6 +205,26 @@ export default function ViolationsPage() {
 
 /* ───────────────────────── Detail / evidence screen ───────────────────────── */
 
+// Renders a bbox crop of `src` (a normalized 0-1 fraction of the image) using an SVG viewBox
+// instead of CSS background-position math, so it never stretches/distorts: "meet" (contain)
+// shows the full crop letterboxed within the frame with even margins regardless of the bbox's
+// own aspect ratio; "slice" (cover) fills the frame completely, lightly cropping overflow.
+function CropSVG({ src, bbox, natural, fit }: {
+  src: string; bbox: { x: number; y: number; w: number; h: number };
+  natural: { w: number; h: number }; fit: "meet" | "slice";
+}) {
+  const vx = bbox.x * natural.w;
+  const vy = bbox.y * natural.h;
+  const vw = Math.max(1, bbox.w * natural.w);
+  const vh = Math.max(1, bbox.h * natural.h);
+  return (
+    <svg width="100%" height="100%" viewBox={`${vx} ${vy} ${vw} ${vh}`} preserveAspectRatio={`xMidYMid ${fit}`} style={{ display: "block" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <image href={src} x={0} y={0} width={natural.w} height={natural.h} />
+    </svg>
+  );
+}
+
 function PlateScramble({ text }: { text: string }) {
   const [display, setDisplay] = useState(text);
   useEffect(() => {
@@ -247,12 +255,21 @@ function DetailScreen({ v, siblings, onBack, onChanged }: { v: VRow; siblings: V
 
   const [dets, setDets] = useState<DetRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
-  const [active, setActive] = useState<Set<string>>(new Set(["vehicle", "plate", "rider", "helmet"]));
   const [zoom, setZoom] = useState<DetRow | null>(null);
   const [busy, setBusy] = useState(false);
+  // Real pixel dimensions of the annotated image — CropSVG needs these to map a normalized
+  // bbox fraction into the SVG's source-pixel viewBox.
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
 
   useEffect(() => {
-    setActive(new Set(["vehicle", "plate", "rider", "helmet"]));
+    setNatural(null);
+    if (!img) return;
+    const el = new window.Image();
+    el.onload = () => setNatural({ w: el.naturalWidth, h: el.naturalHeight });
+    el.src = img;
+  }, [img]);
+
+  useEffect(() => {
     setZoom(null);
     supabase.from("detections").select("id,job_id,class_label,confidence,bbox").eq("job_id", v.job_id)
       .then(({ data }) => setDets(((data as DetRow[]) ?? []).filter(d => d.bbox && "x" in d.bbox)));
@@ -260,14 +277,6 @@ function DetailScreen({ v, siblings, onBack, onChanged }: { v: VRow; siblings: V
       .order("created_at", { ascending: true })
       .then(({ data }) => setAudit((data as AuditRow[]) ?? []));
   }, [v.id, v.job_id]);
-
-  function toggle(key: string) {
-    setActive(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }
 
   async function act(action: "confirm" | "reject" | "escalate") {
     setBusy(true);
@@ -279,7 +288,6 @@ function DetailScreen({ v, siblings, onBack, onChanged }: { v: VRow; siblings: V
     finally { setBusy(false); }
   }
 
-  const visibleDets = dets.filter(d => active.has(bucketOf(d.class_label)));
   const lightingTag = (() => {
     const h = new Date(v.detected_at).getHours();
     return h >= 6 && h < 18 ? "Daylight" : h >= 18 && h < 20 ? "Dusk" : "Low-light";
@@ -317,40 +325,19 @@ function DetailScreen({ v, siblings, onBack, onChanged }: { v: VRow; siblings: V
       <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16, alignItems: "start" }}>
         {/* LEFT */}
         <div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            {BUCKETS.map(b => {
-              const on = active.has(b.key);
-              return (
-                <span key={b.key} onClick={() => toggle(b.key)} style={{ fontFamily: FONT.body, fontSize: 12, fontWeight: 600, color: on ? "#4F46E5" : "#9CA3AF", background: on ? "#EEF0FF" : "#fff", border: `1px solid ${on ? "#C7D2FE" : "#ECECEC"}`, padding: "7px 13px", borderRadius: 9, cursor: "pointer", transition: "all .15s", display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: on ? "#4F46E5" : "#D4D4D8" }} />
-                  {b.label}
-                </span>
-              );
-            })}
-          </div>
-
           <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }} style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: 12, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
             <div style={{ position: "relative", borderRadius: 11, overflow: "hidden", background: "#0d0d12" }}>
               {img ? (
+                // The annotated image already has the violation's own box + label burned in
+                // server-side (EvidenceGenerator) — shown as-is, same as the Detect page result.
+                // A client-side overlay of the job's generic object detections used to be drawn
+                // on top here, but it visually clashed with the clean server-rendered box (gappy/
+                // misaligned thin outlines), so it's been dropped in favor of just the annotated
+                // image; the "Evidence crops" strip below still uses the same detections.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={img} alt="evidence" style={{ display: "block", width: "100%", height: "auto" }} />
               ) : (
                 <div style={{ aspectRatio: "16/10", display: "flex", alignItems: "center", justifyContent: "center", color: "#52525B", fontFamily: FONT.mono, fontSize: 12 }}>no annotated frame stored</div>
-              )}
-              {img && (
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
-                  <AnimatePresence>
-                    {visibleDets.map(d => d.bbox && (
-                      <motion.rect
-                        key={d.id}
-                        x={d.bbox.x * 100} y={d.bbox.y * 100} width={d.bbox.w * 100} height={d.bbox.h * 100}
-                        rx={1} fill="none" stroke={boxColor(d.class_label)} strokeWidth={1.6} vectorEffect="non-scaling-stroke"
-                        initial={{ opacity: 0, pathLength: 0 }} animate={{ opacity: 1, pathLength: 1 }} exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </svg>
               )}
             </div>
           </motion.div>
@@ -368,14 +355,8 @@ function DetailScreen({ v, siblings, onBack, onChanged }: { v: VRow; siblings: V
                     whileHover={{ y: -3 }}
                     style={{ flex: "none", width: 110, height: 78, borderRadius: 10, overflow: "hidden", border: "1px solid #ECECEC", cursor: "zoom-in", position: "relative", background: "#f4f4f5" }}
                   >
-                    {img && d.bbox && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img} alt={d.class_label} style={{
-                        position: "absolute",
-                        width: `${100 / d.bbox.w}%`, height: `${100 / d.bbox.h}%`,
-                        left: `${-d.bbox.x * (100 / d.bbox.w)}%`, top: `${-d.bbox.y * (100 / d.bbox.h)}%`,
-                        maxWidth: "none",
-                      }} />
+                    {img && d.bbox && natural && (
+                      <CropSVG src={img} bbox={d.bbox} natural={natural} fit="slice" />
                     )}
                     <span style={{ position: "absolute", bottom: 3, left: 4, fontFamily: FONT.mono, fontSize: 8.5, color: "#fff", background: "rgba(0,0,0,.55)", padding: "1px 5px", borderRadius: 4 }}>{prettyClass(d.class_label)}</span>
                   </motion.div>
@@ -387,16 +368,14 @@ function DetailScreen({ v, siblings, onBack, onChanged }: { v: VRow; siblings: V
           <AnimatePresence>
             {zoom && (
               <motion.div onClick={() => setZoom(null)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(10,10,14,.78)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <motion.div layoutId={`crop-${zoom.id}`} style={{ width: "min(560px, 80vw)", borderRadius: 16, overflow: "hidden", background: "#111", position: "relative" }}>
-                  {img && zoom.bbox && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img} alt={zoom.class_label} style={{
-                      position: "relative",
-                      width: `${100 / zoom.bbox.w}%`,
-                      left: `${-zoom.bbox.x * (100 / zoom.bbox.w)}%`,
-                      top: `${-zoom.bbox.y * (100 / zoom.bbox.h)}%`,
-                      maxWidth: "none",
-                    }} />
+                <motion.div onClick={(e) => e.stopPropagation()} layoutId={`crop-${zoom.id}`} style={{
+                  width: "min(440px, 86vw)",
+                  height: "min(440px, 70vh)",
+                  borderRadius: 16, overflow: "hidden", background: "#111", position: "relative",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {img && zoom.bbox && natural && (
+                    <CropSVG src={img} bbox={zoom.bbox} natural={natural} fit="meet" />
                   )}
                 </motion.div>
               </motion.div>

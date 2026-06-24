@@ -23,7 +23,7 @@ export function pageStorageKey(key: PageKey) {
 export const SHELL_STEPS: TourStep[] = [
   {
     selector: '[data-tour="sidebar-brand"]',
-    title: "Welcome to Gridlock 2.0",
+    title: "Welcome to Team Padlock",
     body: "This is your enforcement console — every screen here reads live detection data straight out of Supabase. This quick tour takes about a minute.",
     placement: "right",
   },
@@ -51,7 +51,7 @@ export const TOURS: Record<PageKey, TourStep[]> = {
   landing: [
     {
       selector: '[data-tour="landing-nav"]',
-      title: "Welcome to Gridlock 2.0",
+      title: "Welcome to Team Padlock",
       body: "An AI that reads a traffic frame, flags violations, reads number plates, and locates every rider, driver and vehicle — in one pass. Let's take a 60-second look around.",
       placement: "bottom",
     },
@@ -85,7 +85,7 @@ export const TOURS: Record<PageKey, TourStep[]> = {
     {
       selector: '[data-tour="detect-dropzone"]',
       title: "Drop in a frame",
-      body: "Drag a traffic image here, or click to browse. Gridlock runs the full 7-stage pipeline on it — detection, plate OCR, and every violation classifier — in one pass.",
+      body: "Drag a traffic image here, or click to browse. Team Padlock runs the full 7-stage pipeline on it — detection, plate OCR, and every violation classifier — in one pass.",
       placement: "bottom",
     },
     {

@@ -102,7 +102,7 @@ export default function Landing() {
             Read every traffic <span style={{ ...serif, letterSpacing: "-0.01em" }}>violation</span> in a single frame.
           </h1>
           <p style={{ fontSize: 17.5, lineHeight: 1.55, color: "#6B7280", maxWidth: 480, margin: "22px 0 0" }}>
-            Gridlock 2.0 reads any traffic image, flags seven violation classes, reads number plates, and pinpoints every rider, driver and vehicle — with calibrated, auditable evidence.
+            Padlock reads any traffic image, flags seven violation classes, reads number plates, and pinpoints every rider, driver and vehicle — with calibrated, auditable evidence.
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 30 }}>
             <button data-tour="landing-cta" onClick={() => router.push("/detect")} className="gl-press gl-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 9, fontFamily: FONT.body, fontSize: 15, fontWeight: 600, color: "#fff", border: "none", padding: "13px 22px", borderRadius: 12, cursor: "pointer" }}>
@@ -287,7 +287,7 @@ export default function Landing() {
           <div data-tour="landing-demo" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 24, overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr", boxShadow: "0 24px 60px -34px rgba(24,24,27,.2)" }}>
             <div style={{ padding: 44, borderRight: "1px solid #ECECEC" }}>
               <div style={{ fontFamily: FONT.mono, fontSize: 12, letterSpacing: ".1em", color: "#4F46E5", fontWeight: 500 }}>READY WHEN YOU ARE</div>
-              <h2 style={{ fontFamily: FONT.sans, fontSize: 34, fontWeight: 600, letterSpacing: "-0.03em", margin: "12px 0 0", lineHeight: 1.1 }}>See Gridlock 2.0 <span style={serif}>live</span>.</h2>
+              <h2 style={{ fontFamily: FONT.sans, fontSize: 34, fontWeight: 600, letterSpacing: "-0.03em", margin: "12px 0 0", lineHeight: 1.1 }}>See Padlock <span style={serif}>live</span>.</h2>
               <p style={{ fontSize: 15.5, color: "#6B7280", lineHeight: 1.6, margin: "16px 0 0", maxWidth: 380 }}>Tell us about your enforcement setup and we&apos;ll set up a tailored walkthrough on your own camera feeds.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 13, marginTop: 26 }}>
                 {["30-minute tailored walkthrough", "Run on a sample of your frames", "Deployment scoped to your network"].map((t) => (
@@ -344,7 +344,7 @@ export default function Landing() {
       <div style={{ borderTop: "1px solid #ECECEC", marginTop: 40 }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "48px 32px 28px", display: "grid", gridTemplateColumns: "1.7fr 1fr 1fr 1.5fr", gap: 32 }}>
           <div>
-            <Brand size={26} />
+            <Brand size={40} />
             <p style={{ fontSize: 13.5, color: "#6B7280", lineHeight: 1.6, margin: "14px 0 0", maxWidth: 280 }}>Computer-vision traffic enforcement. Read violations, plates and subject locations from any frame — court-ready in one pass.</p>
             <div style={{ fontFamily: FONT.mono, fontSize: 11, color: "#9CA3AF", marginTop: 16, display: "flex", alignItems: "center", gap: 7 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981" }} />All systems operational
@@ -354,7 +354,7 @@ export default function Landing() {
           <FooterCol title="Console" items={[["Detect", () => router.push("/detect")], ["Dashboard", () => router.push("/dashboard")], ["Violations", () => router.push("/violations")], ["Reports", () => router.push("/reports")]]} />
           <div>
             <div style={{ fontSize: 12.5, fontWeight: 600, color: "#18181B", marginBottom: 10 }}>Get a demo</div>
-            <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.55, margin: "0 0 14px" }}>See Gridlock 2.0 live on sample traffic feeds.</p>
+            <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.55, margin: "0 0 14px" }}>See Padlock live on sample traffic feeds.</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => jump("demo")} className="gl-press" style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#fff", background: "#18181B", border: "none", padding: "9px 14px", borderRadius: 10, cursor: "pointer" }}>Request demo</button>
               <button onClick={() => router.push("/dashboard")} className="gl-press gl-btn-ghost" style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#18181B", background: "#fff", border: "1px solid #ECECEC", padding: "9px 14px", borderRadius: 10, cursor: "pointer" }}>Sign in</button>
@@ -363,12 +363,12 @@ export default function Landing() {
         </div>
         <div style={{ borderTop: "1px solid #ECECEC" }}>
           <div style={{ maxWidth: 1180, margin: "0 auto", padding: "18px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: "#9CA3AF" }}>
-            <span>© 2026 Gridlock Systems</span>
+            <span>© 2026 Team Padlock</span>
             <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
               <span className="gl-link">Privacy</span>
               <span className="gl-link">Terms</span>
               <span className="gl-link">Security</span>
-              <span style={{ fontFamily: FONT.mono }}>v2.0.4</span>
+              <span style={{ fontFamily: FONT.mono }}>v1.0.0</span>
             </div>
           </div>
         </div>

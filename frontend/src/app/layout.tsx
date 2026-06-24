@@ -26,7 +26,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gridlock 2.0 — Traffic Violation Detection",
+  title: "Team Padlock — Traffic Violation Detection",
   description:
     "Computer-vision traffic enforcement. Read violations, plates and subject locations from any frame — court-ready in one pass.",
 };

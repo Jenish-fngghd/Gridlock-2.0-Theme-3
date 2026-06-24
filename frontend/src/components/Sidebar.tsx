@@ -9,7 +9,7 @@ import Brand from "./Brand";
 import Avatar from "./Avatar";
 
 const USER_NAME = "Jenish Sorathiya";
-const USER_SUBTITLE = "Gridlock 2.0 Team";
+const USER_SUBTITLE = "Team Padlock";
 
 type Item = { href: string; label: string; icon: React.ReactNode };
 
