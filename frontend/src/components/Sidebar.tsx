@@ -77,7 +77,7 @@ export default function Sidebar() {
       }}
     >
       <Link href="/" data-tour="sidebar-brand" style={{ textDecoration: "none", color: "inherit", padding: "4px 8px 22px" }}>
-        <Brand />
+        <Brand size={48} />
       </Link>
 
       <div

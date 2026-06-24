@@ -110,7 +110,7 @@ export default function DetectPage() {
   const vCount = result?.violations.length ?? 0;
 
   return (
-    <div style={{ position: "relative", overflow: "hidden", background: "#fff" }}>
+    <div style={{ position: "relative", overflow: "hidden", background: "#fff", minHeight: "calc(100vh - 64px)" }}>
       <GradientGridBg side="right" />
       <div style={{ position: "relative", zIndex: 1, padding: "30px 36px 48px", maxWidth: 1180, margin: "0 auto" }}>
       {phase === "idle" && (

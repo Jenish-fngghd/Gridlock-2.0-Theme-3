@@ -83,15 +83,49 @@ class EvidenceGenerator:
                 img = np.asarray(image).copy()
             if img is None:
                 return False
+            img_h, img_w = img.shape[:2]
+            # Scale label size with resolution (reference: 1280px wide) so labels stay readable
+            # without dominating the frame on tiny thumbnails or looking tiny on 4K frames.
+            rel = max(0.45, min(1.6, img_w / 1280))
+            font, scale, thick = cv2.FONT_HERSHEY_SIMPLEX, 0.55 * rel, max(1, round(rel))
+            placed: list[tuple[int, int, int, int]] = []  # already-drawn label rects (x1,y1,x2,y2)
+
+            def _overlaps(a, b) -> bool:
+                ax1, ay1, ax2, ay2 = a
+                bx1, by1, bx2, by2 = b
+                return ax1 < bx2 and ax2 > bx1 and ay1 < by2 and ay2 > by1
+
             for v in violations:
                 bb = v.get("bbox")
                 if not bb or len(bb) != 4:
                     continue
                 x, y, w, h = [int(round(t)) for t in bb]
                 color = (0, 0, 255)  # red
-                cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
-                label = f"{v.get('type','?')} {v.get('confidence',0):.2f}"
-                cv2.putText(img, label, (x, max(0, y - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                cv2.rectangle(img, (x, y), (x + w, y + h), color, 2, cv2.LINE_AA)
+
+                label = f"{v.get('type', '?')} {v.get('confidence', 0):.2f}"
+                (tw, th), baseline = cv2.getTextSize(label, font, scale, thick)
+                pad = 4
+                # Prefer just above the box; if that would clip off the top of the frame, drop
+                # it just inside the box's top edge instead -- never drawn off-canvas, unlike the
+                # plain cv2.putText this replaces.
+                y1 = y - th - baseline - 2 * pad
+                if y1 < 0:
+                    y1 = y + 2
+                y2 = y1 + th + baseline + 2 * pad
+                x1 = max(0, min(x, img_w - tw - 2 * pad))
+                x2 = x1 + tw + 2 * pad
+
+                # Nudge down past any earlier label this one would overlap (stacked violations on
+                # the same/adjacent box, e.g. "no_helmet" + "triple_riding" on one rider).
+                while any(_overlaps((x1, y1, x2, y2), p) for p in placed):
+                    y1 += th + baseline + 2 * pad + 2
+                    y2 = y1 + th + baseline + 2 * pad
+                placed.append((x1, y1, x2, y2))
+
+                cv2.rectangle(img, (x1, y1), (x2, y2), color, -1, cv2.LINE_AA)
+                cv2.putText(img, label, (x1 + pad, y2 - pad - baseline),
+                            font, scale, (255, 255, 255), thick, cv2.LINE_AA)
             if vehicle and vehicle.get("plate", {}).get("text"):
                 cv2.putText(img, vehicle["plate"]["text"], (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)

@@ -266,6 +266,17 @@ class ANPRModule:
             if self._try_load_single(which):
                 self.engine = self._loaded[which]
                 self.engine_name = which
+                return
+            # The specifically-requested engine failed to load (e.g. a corrupted/incomplete
+            # local checkpoint file) -- fall back to the auto-detect ladder instead of leaving
+            # ANPR fully disabled. `recognize()`'s "engine" field always reports which engine
+            # actually ran, so this is never silent about what produced a given reading.
+            order = ["paddleocr", "easyocr", "trocr_base", "trocr", "doctr"]
+            for e in order:
+                if self._try_load_single(e):
+                    self.engine = self._loaded[e]
+                    self.engine_name = e
+                    return
 
     def _try_load_single(self, name: str) -> bool:
         if name in self._loaded:
@@ -375,17 +386,19 @@ class ANPRModule:
 
         RF-DETR/COCO has no plate class, so this fills exactly that gap — called ONLY on
         confirmed/candidate violators' vehicle crops (§4c ROI-gated ANPR: never OCR every car).
+        `sam3` is a `RoboflowSAM3` client (see modules/roboflow_sam3.py): `.detect(image, prompt,
+        conf=...)` returns `[{"box": [x1,y1,x2,y2], "conf": float}, ...]`.
         Returns {bbox, confidence} in the vehicle_crop's own pixel coordinates, or None if no
         plate found / SAM-3 unavailable.
         """
-        if sam3 is None:
+        if sam3 is None or not sam3.available():
             return None
         try:
-            res = sam3.detect_concept(vehicle_crop, "license plate", threshold=threshold)
-            if res.model_unavailable or not res.detections:
+            dets = sam3.detect(vehicle_crop, "license plate", conf=threshold)
+            if not dets:
                 return None
-            best = max(res.detections, key=lambda d: d.confidence)
-            return {"bbox": [round(v, 1) for v in best.xyxy], "confidence": round(best.confidence, 3)}
+            best = max(dets, key=lambda d: d["conf"])
+            return {"bbox": [round(v, 1) for v in best["box"]], "confidence": round(best["conf"], 3)}
         except Exception:  # noqa: BLE001
             return None
 

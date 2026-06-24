@@ -26,20 +26,25 @@ _URL = "https://serverless.roboflow.com/sam3/concept_segment"
 class RoboflowSAM3:
     def __init__(self, api_key: str | None = None, timeout: float = 30.0,
                  default_conf: float = 0.5, retries: int = 4):
-        self.api_key = api_key or os.environ.get("ROBOFLOW_API_KEY", "")
+        primary = api_key or os.environ.get("ROBOFLOW_API_KEY", "")
+        fallback = os.environ.get("ROBOFLOW_API_KEY_FALLBACK", "")
+        # Second key tried only when the primary fails (rate limit / quota exhausted / any
+        # non-200) -- keeps the pipeline running on a free/limited key without manual swapping.
+        self.api_keys = [k for k in dict.fromkeys([primary, fallback]) if k]
         self.timeout = timeout
         self.default_conf = default_conf
         self.retries = retries
 
     def available(self) -> bool:
-        return bool(self.api_key)
+        return bool(self.api_keys)
 
     def detect_many(self, image, prompts: list[str], conf: float | None = None) -> dict:
         """One call, many concepts. Returns {prompt: [{'box': [x1,y1,x2,y2], 'conf': float}, ...]}.
-        On any failure returns {prompt: []} for every prompt plus a private '_unavailable' flag."""
+        On any failure (across all configured keys) returns {prompt: []} for every prompt plus a
+        private '_unavailable' flag."""
         thr = self.default_conf if conf is None else conf
         empty = {p: [] for p in prompts}
-        if not self.api_key or not prompts:
+        if not self.api_keys or not prompts:
             empty["_unavailable"] = True
             return empty
         try:
@@ -49,19 +54,23 @@ class RoboflowSAM3:
             body = {"image": {"type": "base64", "value": b64},
                     "prompts": [{"type": "text", "text": p} for p in prompts]}
             resp = None
-            for _ in range(self.retries):
-                resp = requests.post(f"{_URL}?api_key={self.api_key}", json=body, timeout=self.timeout)
-                if resp.status_code == 200:
+            last_note = ""
+            for key in self.api_keys:
+                for _ in range(self.retries):
+                    resp = requests.post(f"{_URL}?api_key={key}", json=body, timeout=self.timeout)
+                    if resp.status_code == 200:
+                        break
+                    if "lock" in resp.text.lower() or "try again" in resp.text.lower():
+                        time.sleep(5)  # model-manager warming up; brief backoff
+                        continue
+                    break  # non-recoverable on this key (e.g. rate limit) -- try next key
+                if resp is not None and resp.status_code == 200:
                     break
-                if "lock" in resp.text.lower() or "try again" in resp.text.lower():
-                    time.sleep(5)  # model-manager warming up; brief backoff
-                    continue
-                empty["_unavailable"] = True
-                empty["_note"] = f"HTTP {resp.status_code}: {resp.text[:120]}"
-                return empty
+                last_note = f"HTTP {resp.status_code}: {resp.text[:120]}" if resp is not None \
+                    else "busy-lock retries exhausted"
             if resp is None or resp.status_code != 200:
                 empty["_unavailable"] = True
-                empty["_note"] = "busy-lock retries exhausted"
+                empty["_note"] = last_note or "all keys exhausted"
                 return empty
 
             out: dict = {p: [] for p in prompts}

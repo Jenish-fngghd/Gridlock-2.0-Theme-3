@@ -150,16 +150,47 @@ def train(model_size: str = "base", epochs: int = 30, batch: int = 8,
                               EarlyStoppingCallback)
     import numpy as np
 
+    import shutil
+
     hf_id = HF_MODELS[model_size]
     ckpt_dir = CKPT_BASE / f"trocr_ft_{model_size}_{version}"
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     out_final = CKPT_BASE / "trocr_ft"  # canonical path read by ANPRModule
 
+    # ~4GB per epoch checkpoint (model + AdamW state) x save_total_limit=2 kept, plus the final
+    # save (~1.3GB) -- warn early if there isn't comfortably enough room, rather than discovering
+    # it via a truncated safetensors file at the very end of a multi-hour run.
+    free_gb = shutil.disk_usage(ckpt_dir).free / 1e9
+    log(f"[train_anpr] free disk at {ckpt_dir}: {free_gb:.1f} GB")
+    if free_gb < 15:
+        log(f"[train_anpr] WARNING: <15GB free -- checkpoint saves may fail/truncate mid-write")
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     log(f"[train_anpr] model={hf_id}  device={device}  epochs={epochs}  batch={batch}")
     log(f"[train_anpr] loading processor + model ...")
     proc  = TrOCRProcessor.from_pretrained(hf_id)
-    model = VisionEncoderDecoderModel.from_pretrained(hf_id)
+    # low_cpu_mem_usage=False: newer transformers defaults to lazy "meta tensor" loading, but
+    # TrOCR's positional-embedding buffer (decoder.model.decoder.embed_positions._float_tensor)
+    # isn't part of the checkpoint state dict, so it never gets materialized and crashes with
+    # "Cannot copy out of meta tensor; no data!" on the first forward pass. This flag alone isn't
+    # always honored on every transformers version (confirmed: still crashes on 5.12.x), so it's
+    # paired with an explicit sweep below that catches any meta buffer regardless of why it's
+    # still meta.
+    model = VisionEncoderDecoderModel.from_pretrained(hf_id, low_cpu_mem_usage=False)
+
+    # Belt-and-suspenders: materialize any buffer the loader left on the meta device. This buffer
+    # only ever serves as a dtype/device reference (model code does `.to(other_tensor.device)` on
+    # it) -- its actual values are never used in computation, so replacing it with zeros is safe.
+    _meta_buffers = [n for n, b in model.named_buffers() if b.is_meta]
+    for name in _meta_buffers:
+        *parents, leaf = name.split(".")
+        owner = model
+        for p in parents:
+            owner = getattr(owner, p)
+        old = getattr(owner, leaf)
+        owner.register_buffer(leaf, torch.zeros(old.shape, dtype=old.dtype))
+    if _meta_buffers:
+        log(f"[train_anpr] materialized {len(_meta_buffers)} meta buffer(s): {_meta_buffers}")
 
     # Configure seq2seq decoding tokens
     model.config.decoder_start_token_id = proc.tokenizer.cls_token_id
@@ -211,6 +242,12 @@ def train(model_size: str = "base", epochs: int = 30, batch: int = 8,
         weight_decay=0.01,
         eval_strategy="epoch",
         save_strategy="epoch",
+        # save_total_limit caps disk usage: each epoch checkpoint is the model + full AdamW
+        # optimizer state (~4GB for trocr-base), so 30 epochs with no limit can accumulate
+        # ~120GB and silently fill the disk mid-write -- this is what truncated the previous
+        # trocr_ft checkpoint ("incomplete metadata, file not fully covered"). The Trainer
+        # always keeps the best checkpoint regardless of this limit (load_best_model_at_end).
+        save_total_limit=2,
         load_best_model_at_end=True,
         metric_for_best_model="exact_acc",
         greater_is_better=True,
@@ -239,9 +276,39 @@ def train(model_size: str = "base", epochs: int = 30, batch: int = 8,
     val_exact   = eval_result.get("eval_exact_acc", -1)
     log(f"[train_anpr] val exact_acc={val_exact}  CER={val_cer}")
 
-    # Save final model + processor to the canonical path
-    trainer.save_model(str(out_final))
-    proc.save_pretrained(str(out_final))
+    # Save to a staging dir first, verify the weights file actually deserializes, then atomically
+    # swap it into the canonical path. A crash/disk-full mid-write only ever corrupts the staging
+    # dir -- out_final (and any previously-good checkpoint there) is never touched until the new
+    # save is confirmed valid. This is the direct fix for the earlier incomplete-save corruption.
+    from safetensors import safe_open
+
+    staging = ckpt_dir / "_staging_final"
+    if staging.exists():
+        shutil.rmtree(staging)
+    trainer.save_model(str(staging))
+    proc.save_pretrained(str(staging))
+
+    weights_file = staging / "model.safetensors"
+    if not weights_file.exists():
+        raise RuntimeError(f"[train_anpr] save failed: {weights_file} was never written "
+                           f"(check disk space: {shutil.disk_usage(staging).free / 1e9:.1f} GB free)")
+    try:
+        with safe_open(str(weights_file), framework="pt") as f:
+            n_tensors = len(list(f.keys()))
+        if n_tensors == 0:
+            raise RuntimeError("model.safetensors has zero tensors")
+    except Exception as e:
+        free_gb = shutil.disk_usage(staging).free / 1e9
+        raise RuntimeError(
+            f"[train_anpr] saved checkpoint at {staging} is corrupted ({type(e).__name__}: {e}). "
+            f"Free disk: {free_gb:.1f} GB. NOT swapping into {out_final} -- "
+            f"any previous good checkpoint there is left untouched."
+        ) from e
+    log(f"[train_anpr] verified staged checkpoint: {n_tensors} tensors OK")
+
+    if out_final.exists():
+        shutil.rmtree(out_final)
+    staging.rename(out_final)
     log(f"[train_anpr] saved → {out_final}")
 
     return {

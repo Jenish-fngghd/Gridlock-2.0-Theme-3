@@ -2,12 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { motion, AnimatePresence } from "motion/react";
+import { supabase, storageUrl } from "@/lib/supabase";
 import { FONT } from "@/lib/ui";
 import { requestTour } from "@/lib/tourBus";
 import Brand from "@/components/Brand";
 import Reveal from "@/components/Reveal";
 import CountUp from "@/components/CountUp";
+
+interface HeroBox { x: number; y: number; w: number; h: number }
+interface HeroData {
+  imgUrl: string;
+  cameraLabel: string;
+  timestamp: string;
+  violationCount: number;
+  objectCount: number;
+  status: string;
+  boxes: HeroBox[]; // violation bboxes, absolute pixels in the source image's own coordinates
+}
 
 const serif: React.CSSProperties = { fontFamily: FONT.serif, fontWeight: 400, fontStyle: "italic" };
 
@@ -48,6 +60,7 @@ export default function Landing() {
   const [openFaq, setOpenFaq] = useState<number>(0);
   const [sent, setSent] = useState(false);
   const [mapPct, setMapPct] = useState<number | null>(null);
+  const [hero, setHero] = useState<HeroData | null>(null);
 
   useEffect(() => {
     supabase
@@ -65,6 +78,63 @@ export default function Landing() {
         }
       });
   }, []);
+
+  // Hero visual: pins a specific curated violation via NEXT_PUBLIC_HERO_JOB_ID when set (picking
+  // "most recent" otherwise tends to surface whatever was last pushed through for debugging,
+  // not a presentable example) — falls back to most-recent-real, then to the static mockup
+  // below if nothing's been processed yet (cold-start / dev environments).
+  useEffect(() => {
+    (async () => {
+      const pinnedJobId = process.env.NEXT_PUBLIC_HERO_JOB_ID;
+      let query = supabase
+        .from("violations")
+        .select("job_id, status, detected_at, annotated_image_path, cameras(name, location_name)")
+        .not("annotated_image_path", "is", null);
+      query = pinnedJobId
+        ? query.eq("job_id", pinnedJobId)
+        : query.order("detected_at", { ascending: false });
+      const { data: vRows } = await query.limit(1);
+      const row = vRows?.[0] as {
+        job_id: string; status: string; detected_at: string; annotated_image_path: string;
+        cameras: { name: string; location_name: string | null } | null;
+      } | undefined;
+      if (!row) return;
+      const imgUrl = storageUrl("annotated", row.annotated_image_path);
+      if (!imgUrl) return;
+
+      const [{ data: jobViolations }, { count: objectCount }] = await Promise.all([
+        supabase.from("violations").select("evidence").eq("job_id", row.job_id),
+        supabase.from("detections").select("id", { count: "exact", head: true }).eq("job_id", row.job_id),
+      ]);
+      const boxes: HeroBox[] = (jobViolations ?? [])
+        .map((v) => (v.evidence as { bbox?: number[] } | null)?.bbox)
+        .filter((bb): bb is number[] => Array.isArray(bb) && bb.length === 4)
+        .map(([x, y, w, h]) => ({ x, y, w, h }));
+
+      setHero({
+        imgUrl,
+        cameraLabel: row.cameras?.location_name ?? row.cameras?.name ?? "Live camera",
+        timestamp: new Date(row.detected_at).toLocaleTimeString([], { hour12: false }),
+        violationCount: jobViolations?.length ?? 1,
+        objectCount: objectCount ?? 0,
+        status: row.status === "pending" ? "Pending review" : "Auto-confirmed",
+        boxes,
+      });
+    })();
+  }, []);
+
+  // Natural pixel size of the hero image -- needed so the animated box overlay below aligns
+  // exactly with the violation's own box already burned into the image, even though the image
+  // is displayed with object-fit: cover (cropped to fill a 16:10 frame).
+  const [heroNatural, setHeroNatural] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    setHeroNatural(null);
+    if (!hero?.imgUrl) return;
+    const el = new window.Image();
+    el.onload = () => setHeroNatural({ w: el.naturalWidth, h: el.naturalHeight });
+    el.src = hero.imgUrl;
+  }, [hero?.imgUrl]);
+  const ready = !!hero && !!heroNatural;
 
   const jump = (id: string) => {
     const el = document.getElementById(id);
@@ -127,29 +197,72 @@ export default function Landing() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 6px 12px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981", animation: "ringpulse 2.4s infinite" }} />
-                <span style={{ fontFamily: FONT.mono, fontSize: 11.5, fontWeight: 500, color: "#52525B" }}>CAM-07 · NH-48 JUNCTION</span>
+                <span style={{ fontFamily: FONT.mono, fontSize: 11.5, fontWeight: 500, color: "#52525B" }}>{hero ? hero.cameraLabel.toUpperCase() : "CAM-07 · NH-48 JUNCTION"}</span>
               </div>
-              <span style={{ fontFamily: FONT.mono, fontSize: 11, color: "#9CA3AF" }}>14:08:22</span>
+              <span style={{ fontFamily: FONT.mono, fontSize: 11, color: "#9CA3AF" }}>{hero?.timestamp ?? "14:08:22"}</span>
             </div>
-            <div style={{ position: "relative", borderRadius: 13, overflow: "hidden", aspectRatio: "16 / 10", background: "repeating-linear-gradient(48deg,#1c1c20,#1c1c20 11px,#212126 11px,#212126 22px)" }}>
-              <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 70% 20%,rgba(79,70,229,.18),transparent 55%)" }} />
-              <span style={{ position: "absolute", top: 10, left: 12, fontFamily: FONT.mono, fontSize: 9.5, letterSpacing: ".06em", color: "rgba(255,255,255,.42)" }}>FRAME 1920×1200 · 60fps</span>
-              <div style={{ position: "absolute", left: "13%", top: "26%", width: "25%", height: "50%", border: "2px solid #EF4444", borderRadius: 7, boxShadow: "0 0 0 1px rgba(239,68,68,.25),inset 0 0 28px rgba(239,68,68,.12)", animation: "bfu .6s ease both", animationDelay: ".6s" }}>
-                <div style={{ position: "absolute", top: -21, left: -2, background: "#EF4444", color: "#fff", fontFamily: FONT.mono, fontSize: 9.5, fontWeight: 600, padding: "2px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>NO HELMET 0.91</div>
-              </div>
-              <div style={{ position: "absolute", left: "58%", top: "58%", width: "22%", height: "13%", border: "2px solid #6366F1", borderRadius: 6, boxShadow: "0 0 0 1px rgba(99,102,241,.3)", animation: "bfu .6s ease both", animationDelay: ".78s" }}>
-                <div style={{ position: "absolute", bottom: -20, left: -2, background: "#4F46E5", color: "#fff", fontFamily: FONT.mono, fontSize: 9.5, fontWeight: 600, padding: "2px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>DL 3C AB 1234</div>
-              </div>
+            <div style={{ position: "relative", borderRadius: 13, overflow: "hidden", aspectRatio: "16 / 10", background: ready ? "#0d0d12" : "repeating-linear-gradient(48deg,#1c1c20,#1c1c20 11px,#212126 11px,#212126 22px)" }}>
+              <AnimatePresence mode="wait">
+                {ready ? (
+                  // hero.imgUrl is the server-rendered evidence image (EvidenceGenerator), which
+                  // already has the violation's own box + label burned in -- same as the
+                  // Detect/Violations pages. The generic-object client overlay that used to be
+                  // drawn on top is gone (it clashed with the baked-in box), but we still want
+                  // the signature "box draws itself in" flourish on load, so an SVG re-draws an
+                  // animated outline exactly on top of the real box. Using an SVG <image> +
+                  // viewBox (rather than a plain <img> + % positioned overlay) keeps the overlay
+                  // pixel-aligned with the baked-in box even though the frame is cropped via
+                  // object-fit: cover -- preserveAspectRatio="xMidYMid slice" is the SVG
+                  // equivalent of "cover", in the same coordinate space as the overlay rects.
+                  // Gated on `ready` (hero data AND the image's natural size both resolved, i.e.
+                  // it's already decoded in the browser) and only swapped in via the fade below,
+                  // so there's never a blank/half-loaded frame visible -- the placeholder mockup
+                  // stays up the entire time the real photo is still loading.
+                  <motion.div key="real" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} style={{ position: "absolute", inset: 0 }}>
+                    <svg viewBox={`0 0 ${heroNatural!.w} ${heroNatural!.h}`} preserveAspectRatio="xMidYMid slice" width="100%" height="100%" style={{ display: "block" }}>
+                      <image href={hero!.imgUrl} x={0} y={0} width={heroNatural!.w} height={heroNatural!.h} />
+                      {hero!.boxes.map((b, i) => (
+                        // One-time settle-into-place: box starts slightly below its real
+                        // position and fades/slides up to where it actually belongs, rather
+                        // than tracing its own outline. Offset is sized relative to the image
+                        // (not a fixed px) so it reads the same on a tiny vs. a 4K frame.
+                        <motion.rect
+                          key={i}
+                          x={b.x} y={b.y} width={b.w} height={b.h}
+                          fill="none" stroke="#EF4444" strokeWidth={Math.max(2, heroNatural!.w / 280)}
+                          vectorEffect="non-scaling-stroke"
+                          initial={{ opacity: 0, y: b.y + heroNatural!.h / 35 }}
+                          animate={{ opacity: 1, y: b.y }}
+                          transition={{ duration: 0.55, delay: 0.5 + i * 0.15, ease: [0.16, 1, 0.3, 1] }}
+                        />
+                      ))}
+                    </svg>
+                  </motion.div>
+                ) : (
+                  <motion.div key="placeholder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} style={{ position: "absolute", inset: 0 }}>
+                    <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 70% 20%,rgba(79,70,229,.18),transparent 55%)" }} />
+                    <span style={{ position: "absolute", top: 10, left: 12, fontFamily: FONT.mono, fontSize: 9.5, letterSpacing: ".06em", color: "rgba(255,255,255,.42)" }}>FRAME 1920×1200 · 60fps</span>
+                    <div style={{ position: "absolute", left: "13%", top: "26%", width: "25%", height: "50%", border: "2px solid #EF4444", borderRadius: 7, boxShadow: "0 0 0 1px rgba(239,68,68,.25),inset 0 0 28px rgba(239,68,68,.12)", animation: "bfu .6s ease both", animationDelay: ".6s" }}>
+                      <div style={{ position: "absolute", top: -21, left: -2, background: "#EF4444", color: "#fff", fontFamily: FONT.mono, fontSize: 9.5, fontWeight: 600, padding: "2px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>NO HELMET 0.91</div>
+                    </div>
+                    <div style={{ position: "absolute", left: "58%", top: "58%", width: "22%", height: "13%", border: "2px solid #6366F1", borderRadius: 6, boxShadow: "0 0 0 1px rgba(99,102,241,.3)", animation: "bfu .6s ease both", animationDelay: ".78s" }}>
+                      <div style={{ position: "absolute", bottom: -20, left: -2, background: "#4F46E5", color: "#fff", fontFamily: FONT.mono, fontSize: 9.5, fontWeight: 600, padding: "2px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>DL 3C AB 1234</div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 6px 4px" }}>
-              <span style={{ fontFamily: FONT.mono, fontSize: 11.5, color: "#52525B" }}><span style={{ color: "#EF4444", fontWeight: 600 }}>2</span> violations · <span style={{ color: "#18181B", fontWeight: 600 }}>4</span> objects</span>
-              <span style={{ fontFamily: FONT.body, fontSize: 11.5, fontWeight: 600, color: "#10B981", background: "#ECFDF5", padding: "3px 9px", borderRadius: 6 }}>Auto-confirmed</span>
+              <span style={{ fontFamily: FONT.mono, fontSize: 11.5, color: "#52525B" }}><span style={{ color: "#EF4444", fontWeight: 600 }}>{hero?.violationCount ?? 2}</span> violations · <span style={{ color: "#18181B", fontWeight: 600 }}>{hero?.objectCount ?? 4}</span> objects</span>
+              <span style={{ fontFamily: FONT.body, fontSize: 11.5, fontWeight: 600, color: "#10B981", background: "#ECFDF5", padding: "3px 9px", borderRadius: 6 }}>{hero?.status ?? "Auto-confirmed"}</span>
             </div>
           </div>
-          <div style={{ position: "absolute", bottom: -14, left: -22, background: "#18181B", color: "#fff", borderRadius: 11, padding: "10px 13px", boxShadow: "0 16px 34px -14px rgba(24,24,27,.55)", animation: "float 4.5s ease-in-out infinite" }}>
-            <div style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: ".08em", color: "#A1A1AA" }}>RIDER LOCATED</div>
-            <div style={{ fontFamily: FONT.mono, fontSize: 13, fontWeight: 600, marginTop: 2 }}>28.6139°N · 77.2090°E</div>
-          </div>
+          {!hero && (
+            <div style={{ position: "absolute", bottom: -14, left: -22, background: "#18181B", color: "#fff", borderRadius: 11, padding: "10px 13px", boxShadow: "0 16px 34px -14px rgba(24,24,27,.55)", animation: "float 4.5s ease-in-out infinite" }}>
+              <div style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: ".08em", color: "#A1A1AA" }}>RIDER LOCATED</div>
+              <div style={{ fontFamily: FONT.mono, fontSize: 13, fontWeight: 600, marginTop: 2 }}>28.6139°N · 77.2090°E</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -344,7 +457,7 @@ export default function Landing() {
       <div style={{ borderTop: "1px solid #ECECEC", marginTop: 40 }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "48px 32px 28px", display: "grid", gridTemplateColumns: "1.7fr 1fr 1fr 1.5fr", gap: 32 }}>
           <div>
-            <Brand size={40} />
+            <Brand size={60} />
             <p style={{ fontSize: 13.5, color: "#6B7280", lineHeight: 1.6, margin: "14px 0 0", maxWidth: 280 }}>Computer-vision traffic enforcement. Read violations, plates and subject locations from any frame — court-ready in one pass.</p>
             <div style={{ fontFamily: FONT.mono, fontSize: 11, color: "#9CA3AF", marginTop: 16, display: "flex", alignItems: "center", gap: 7 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981" }} />All systems operational

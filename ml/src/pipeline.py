@@ -369,15 +369,32 @@ class Pipeline:
 
     # ---- ROI-gated ANPR --------------------------------------------------
 
+    @staticmethod
+    def _bbox_area(v: dict) -> float:
+        vb = v.get("vehicle_bbox")  # xyxy
+        if vb:
+            return max(0.0, vb[2] - vb[0]) * max(0.0, vb[3] - vb[1])
+        b = v.get("bbox")  # xywh
+        return max(0.0, b[2]) * max(0.0, b[3]) if b else 0.0
+
     def _run_anpr(self, work, violations: list[dict]) -> dict:
         kept = [v for v in violations if v.get("band") != "discard"]
         if not kept:
             return {}
-        bb = kept[0].get("vehicle_bbox") or kept[0].get("bbox")
+        # Pick the violation with the largest vehicle box, not just the first in the list --
+        # a frame can have several violators (e.g. a small unrelated motorcycle flagged for
+        # "helmet" elsewhere in frame) and kept[0] could be a tiny crop with no legible plate
+        # while a bigger violator (e.g. the actual triple-riding bike) sits right next to it.
+        best = max(kept, key=self._bbox_area)
+        bb = best.get("vehicle_bbox") or best.get("bbox")
         crop = self._safe_crop(work, bb) if bb else None
         if crop is None:
             return {"plate": {"text": "", "confidence": 0.0, "note": "no vehicle crop available"}}
-        plate_box = ANPRModule.locate_plate_sam3(crop, self.sam3) if self.sam3 else None
+        # self.sam3 is the legacy local-subprocess client and is always None on the hosted path
+        # (see __init__) -- plate localization must go through the live Roboflow client that
+        # sam3_violations.py already uses (self.sam3v.sam3), not the dead self.sam3.
+        rf = self.sam3v.sam3 if self.sam3v is not None else None
+        plate_box = ANPRModule.locate_plate_sam3(crop, rf) if rf is not None else None
         if plate_box is None:
             return {"plate": {"text": "", "confidence": 0.0,
                               "note": "SAM-3 unavailable or no plate localized"}}
