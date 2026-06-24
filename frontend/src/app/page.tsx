@@ -47,7 +47,7 @@ const CHIPS = [
 ];
 
 const FAQ = [
-  { q: "How accurate is the violation detection?", a: "On a held-out benchmark of 5,000 IDD images the detector reaches mAP@0.5 ≈ 0.52, and every detection carries a per-class confidence so reviewers can set their own thresholds. We report honest, benchmarked numbers — never a headline figure we can't reproduce." },
+  { q: "How accurate is the violation detection?", a: "On a held-out benchmark of 5,000 IDD images the detector reaches mAP@0.5 ≈ 0.59 — RF-DETR for live inference, with SAM-3 used offline to auto-label rare classes (autorickshaw, vehicle-fallback) so the detector sees more of them in training. Every detection still carries a per-class confidence so reviewers can set their own thresholds. We report honest, benchmarked numbers — never a headline figure we can't reproduce." },
   { q: "Which violations can it flag in a single pass?", a: "Seven classes — no-helmet, triple-riding, no-seatbelt, wrong-side, stop-line, red-light and illegal-parking — plus number-plate OCR and per-subject evidence for every flagged vehicle, rider and driver." },
   { q: "Does it read number plates reliably?", a: "The ANPR head reaches ~78% exact-match on our plate benchmark — roughly +33 points over a PaddleOCR baseline — and returns the raw crop alongside the decoded string for audit." },
   { q: "How are red-light and wrong-side detected?", a: "A per-camera scene-context model encodes the stop-line, lane vectors and signal ROI. Signal-state classification runs at 99.7% on the LISA benchmark; wrong-side and red-light reach F1 ≈ 0.96 / 0.90 respectively." },
@@ -74,7 +74,7 @@ export default function Landing() {
         if (det?.metric_value != null) {
           setMapPct(det.metric_value <= 1 ? det.metric_value * 100 : det.metric_value);
         } else {
-          setMapPct(52.2);
+          setMapPct(58.6);
         }
       });
   }, []);
@@ -135,6 +135,22 @@ export default function Landing() {
     el.src = hero.imgUrl;
   }, [hero?.imgUrl]);
   const ready = !!hero && !!heroNatural;
+
+  // Crop the SVG viewBox in around the violation's own box instead of showing the full wide
+  // frame -- a modest zoom, not a tight close-up. Computed from real coordinates (not a fixed
+  // px offset) so it centers correctly regardless of image resolution or where the box sits.
+  const heroZoom = (() => {
+    if (!heroNatural || !hero?.boxes.length) return null;
+    const b = hero.boxes[0];
+    const aspect = 1.6; // matches the hero frame's own 16:10 box
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+    let h = Math.max(b.h * 2.2, (b.w * 2.2) / aspect, heroNatural.h * 0.3);
+    let w = h * aspect;
+    if (w > heroNatural.w) { w = heroNatural.w; h = w / aspect; }
+    const x = Math.max(0, Math.min(cx - w / 2, heroNatural.w - w));
+    const y = Math.max(0, Math.min(cy - h / 2, heroNatural.h - h));
+    return { x, y, w, h };
+  })();
 
   const jump = (id: string) => {
     const el = document.getElementById(id);
@@ -219,7 +235,7 @@ export default function Landing() {
                   // so there's never a blank/half-loaded frame visible -- the placeholder mockup
                   // stays up the entire time the real photo is still loading.
                   <motion.div key="real" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} style={{ position: "absolute", inset: 0 }}>
-                    <svg viewBox={`0 0 ${heroNatural!.w} ${heroNatural!.h}`} preserveAspectRatio="xMidYMid slice" width="100%" height="100%" style={{ display: "block" }}>
+                    <svg viewBox={heroZoom ? `${heroZoom.x} ${heroZoom.y} ${heroZoom.w} ${heroZoom.h}` : `0 0 ${heroNatural!.w} ${heroNatural!.h}`} preserveAspectRatio="xMidYMid slice" width="100%" height="100%" style={{ display: "block" }}>
                       <image href={hero!.imgUrl} x={0} y={0} width={heroNatural!.w} height={heroNatural!.h} />
                       {hero!.boxes.map((b, i) => (
                         // One-time settle-into-place: box starts slightly below its real
@@ -354,7 +370,7 @@ export default function Landing() {
         <Reveal delay={0.05}>
           <div data-tour="landing-stats" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0, borderTop: "1px solid #ECECEC", borderBottom: "1px solid #ECECEC", padding: "32px 0" }}>
             {[
-              { node: <CountUp end={mapPct ?? 52.2} decimals={1} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "Detection mAP@0.5 (IDD)" },
+              { node: <CountUp end={mapPct ?? 58.6} decimals={1} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "Detection mAP@0.5 (IDD)" },
               { node: <CountUp end={78} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "ANPR exact-match" },
               { node: <CountUp end={99.7} decimals={1} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "Signal-state accuracy (LISA)" },
               { node: <span style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }}>7</span>, label: "Violation classes + ANPR" },

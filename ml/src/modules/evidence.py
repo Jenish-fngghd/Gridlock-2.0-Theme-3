@@ -84,6 +84,24 @@ class EvidenceGenerator:
             if img is None:
                 return False
             img_h, img_w = img.shape[:2]
+
+            # Tiny source frames (old test stills, low-res phone photos) don't have enough
+            # pixels for a legible label at any font scale -- a handful of pixels per glyph
+            # looks blocky regardless of JPEG quality. Upscale the frame itself before drawing
+            # so the label has a real pixel budget, and scale the violation dicts in place to
+            # match -- evidence.bbox must describe positions in whatever image actually ends up
+            # stored (consumed downstream by the hero/violations-page overlays), not the original.
+            MIN_W = 640
+            if img_w < MIN_W:
+                up = MIN_W / img_w
+                img = cv2.resize(img, (round(img_w * up), round(img_h * up)), interpolation=cv2.INTER_CUBIC)
+                img_h, img_w = img.shape[:2]
+                for v in violations:
+                    for key in ("bbox", "vehicle_bbox"):
+                        bb = v.get(key)
+                        if bb and len(bb) == 4:
+                            v[key] = [round(t * up, 1) for t in bb]
+
             # Scale label size with resolution (reference: 1280px wide) so labels stay readable
             # without dominating the frame on tiny thumbnails or looking tiny on 4K frames.
             rel = max(0.45, min(1.6, img_w / 1280))

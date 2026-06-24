@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase, storageUrl } from "@/lib/supabase";
 import type { Violation } from "@/lib/types";
@@ -30,18 +31,46 @@ interface AuditRow {
 
 type Filter = "All" | "Critical" | "High" | "Pending";
 const FILTERS: Filter[] = ["All", "Critical", "High", "Pending"];
-const COLS = "96px 1.3fr 130px 1fr 90px 100px 110px";
 
 function vioCode(id: string) {
   return "VIO-" + id.replace(/-/g, "").slice(0, 6).toUpperCase();
 }
 
+const SEVERITY_RANK: Record<Severity, number> = { Critical: 3, High: 2, Medium: 1, Low: 0 };
+
+/** The most severe (then most confident) violation in a job's group — used as the card's
+ *  headline chip and as the violation a click opens, while the body still lists every
+ *  violation flagged on that same frame. */
+function pickPrimary(group: VRow[]): VRow {
+  return group.reduce((best, v) => {
+    const a = SEVERITY_RANK[severityFor(v.violation_type)];
+    const b = SEVERITY_RANK[severityFor(best.violation_type)];
+    if (a !== b) return a > b ? v : best;
+    return (v.confidence ?? 0) > (best.confidence ?? 0) ? v : best;
+  });
+}
+
 export default function ViolationsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ViolationsInner />
+    </Suspense>
+  );
+}
+
+// Detail view is keyed off a `?id=` query param (rather than local state) so opening it pushes
+// a real browser-history entry — that's what makes the back button / trackpad-back gesture land
+// you on the violations list instead of skipping past it to whatever page you came from.
+function ViolationsInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedId = searchParams.get("id");
+
   const [rows, setRows] = useState<VRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("All");
   const [q, setQ] = useState("");
-  const [selected, setSelected] = useState<VRow | null>(null);
+  const selected = selectedId ? rows.find((r) => r.id === selectedId) ?? null : null;
 
   async function load() {
     const { data } = await supabase
@@ -76,6 +105,20 @@ export default function ViolationsPage() {
     });
   }, [rows, filter, q]);
 
+  // One ingestion job can carry several violations on the same frame (e.g. no-helmet + triple-
+  // riding on one rider) — they share a single annotated_image_path (every box already burned
+  // in server-side), so group by job_id and show one card per frame listing all of them, rather
+  // than repeating the same image once per violation.
+  const grouped = useMemo(() => {
+    const map = new Map<string, VRow[]>();
+    for (const v of filtered) {
+      const arr = map.get(v.job_id);
+      if (arr) arr.push(v);
+      else map.set(v.job_id, [v]);
+    }
+    return Array.from(map.values());
+  }, [filtered]);
+
   function exportCsv() {
     const head = ["id", "violation", "plate", "location", "confidence", "severity", "status", "detected_at"];
     const lines = filtered.map((v) =>
@@ -104,7 +147,7 @@ export default function ViolationsPage() {
       <DetailScreen
         v={selected}
         siblings={rows.filter((r) => r.job_id === selected.job_id)}
-        onBack={() => setSelected(null)}
+        onBack={() => router.back()}
         onChanged={load}
       />
     );
@@ -156,50 +199,138 @@ export default function ViolationsPage() {
         })}
       </div>
 
-      {/* table */}
-      <div data-tour="viol-table" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", marginTop: 16, boxShadow: "0 1px 2px rgba(24,24,27,.04)", animation: "bfu .6s cubic-bezier(.16,1,.3,1) both", animationDelay: ".12s" }}>
-        <div style={{ display: "grid", gridTemplateColumns: COLS, padding: "12px 20px", borderBottom: "1px solid #ECECEC", fontFamily: FONT.mono, fontSize: 10.5, letterSpacing: ".06em", color: "#9CA3AF", background: "#FCFCFC" }}>
-          <span>ID</span><span>VIOLATION</span><span>PLATE</span><span>LOCATION</span><span>CONF</span><span>SEVERITY</span><span>STATUS</span>
+      {/* card grid */}
+      {loading ? (
+        <div data-tour="viol-table" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginTop: 18 }}>
+          {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="shimmer" style={{ height: 312, borderRadius: 16 }} />)}
         </div>
-
-        {loading ? (
-          [0, 1, 2, 3, 4].map((i) => <div key={i} className="shimmer" style={{ height: 48, margin: "8px 20px", borderRadius: 8 }} />)
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: "40px 20px", textAlign: "center", color: "#6B7280", fontSize: 14 }}>No matching violations.</div>
-        ) : (
-          filtered.map((v, i) => {
-            const sev = severityFor(v.violation_type);
-            const col = SEVERITY_COLOR[sev];
-            const st = statusMeta(v.status);
-            return (
-              <motion.div
-                key={v.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: Math.min(i, 14) * 0.025 }}
-                className="gl-row"
-                onClick={() => setSelected(v)}
-                style={{ display: "grid", gridTemplateColumns: COLS, alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #F4F4F5", fontSize: 13.5, transition: "background .12s", cursor: "pointer" }}
-              >
-                <span style={{ fontFamily: FONT.mono, fontSize: 11.5, color: "#9CA3AF" }}>{vioCode(v.id)}</span>
-                <span style={{ display: "flex", alignItems: "center", gap: 9, fontWeight: 500 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: col.c, flex: "none" }} />{VIOLATION_LABELS[v.violation_type]}
-                </span>
-                <span style={{ fontFamily: FONT.mono, fontWeight: 600 }}>{v.plates?.plate_text ?? "—"}</span>
-                <span style={{ color: "#6B7280", fontSize: 12.5 }}>{v.cameras?.location_name ?? v.cameras?.name ?? "—"}</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12.5, fontWeight: 600 }}>{pct(v.confidence)}</span>
-                <span style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 600, color: col.c, background: col.b, padding: "3px 9px", borderRadius: 6, justifySelf: "start" }}>{sev}</span>
-                <span style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 600, color: st.c, background: st.b, padding: "3px 9px", borderRadius: 6, justifySelf: "start" }}>{st.label}</span>
-              </motion.div>
-            );
-          })
-        )}
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 20px", fontSize: 12.5, color: "#9CA3AF" }}>
-          <span style={{ fontFamily: FONT.mono }}>Showing {filtered.length} of {rows.length}</span>
+      ) : filtered.length === 0 ? (
+        <div style={{ marginTop: 18, padding: "48px 20px", textAlign: "center", color: "#6B7280", fontSize: 14, background: "#fff", border: "1px solid #ECECEC", borderRadius: 16 }}>No matching violations.</div>
+      ) : (
+        <div data-tour="viol-table" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginTop: 18 }}>
+          {grouped.map((group, i) => {
+            const primary = pickPrimary(group);
+            return <ViolationCard key={primary.job_id} group={group} primary={primary} index={i} onOpen={() => router.push(`/violations?id=${primary.id}`)} />;
+          })}
         </div>
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 4px 4px", fontSize: 12.5, color: "#9CA3AF" }}>
+        <span style={{ fontFamily: FONT.mono }}>Showing {grouped.length} frame{grouped.length === 1 ? "" : "s"} · {filtered.length} of {rows.length} violations</span>
       </div>
     </div>
+  );
+}
+
+function ViolationCard({ group, primary, index, onOpen }: { group: VRow[]; primary: VRow; index: number; onOpen: () => void }) {
+  const col = SEVERITY_COLOR[severityFor(primary.violation_type)];
+  const img = storageUrl("annotated", primary.annotated_image_path);
+  const plate = group.find((v) => v.plates?.plate_text)?.plates?.plate_text ?? null;
+  const location = primary.cameras?.location_name ?? primary.cameras?.name ?? "Unknown location";
+  const lighting = (() => {
+    const h = new Date(primary.detected_at).getHours();
+    return h >= 6 && h < 18 ? "Daylight" : h >= 18 && h < 20 ? "Dusk" : "Low-light";
+  })();
+
+  const pendingCount = group.filter((v) => v.status === "pending").length;
+  const statusChip = pendingCount > 0
+    ? { label: pendingCount > 1 ? `${pendingCount} pending` : "Pending", c: "#F59E0B", b: "#FFFBEB" }
+    : statusMeta(primary.status);
+
+  const visible = group.slice(0, 4);
+  const overflow = group.length - visible.length;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18, filter: "blur(6px)" }}
+      whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      viewport={{ once: true, margin: "-30px" }}
+      transition={{ duration: 0.45, delay: (index % 8) * 0.045, ease: [0.16, 1, 0.3, 1] }}
+      onClick={onOpen}
+      className="gl-vcard"
+      style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 2px rgba(24,24,27,.04)", cursor: "pointer" }}
+    >
+      {/* image */}
+      <div style={{ position: "relative", aspectRatio: "16/10", overflow: "hidden", background: "#0d0d12" }}>
+        {img ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={img} alt="evidence" loading="lazy" className="gl-vcard-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        ) : (
+          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#52525B", fontFamily: FONT.mono, fontSize: 11 }}>no frame stored</div>
+        )}
+
+        {/* top chips */}
+        <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6, fontFamily: FONT.body, fontSize: 10.5, fontWeight: 600, color: "#fff", background: "rgba(10,10,14,.55)", backdropFilter: "blur(6px)", padding: "5px 10px", borderRadius: 99 }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: col.c, flex: "none" }} />
+          {VIOLATION_LABELS[primary.violation_type]}
+          {group.length > 1 && (
+            <span style={{ marginLeft: 2, fontFamily: FONT.mono, fontSize: 9.5, color: "rgba(255,255,255,.75)" }}>+{group.length - 1}</span>
+          )}
+        </div>
+        <div style={{ position: "absolute", top: 10, right: 10, fontFamily: FONT.body, fontSize: 10, fontWeight: 700, color: statusChip.c, background: statusChip.b, padding: "4px 9px", borderRadius: 99, border: `1px solid ${statusChip.c}28` }}>
+          {statusChip.label}
+        </div>
+
+        {/* bottom scrim + caption */}
+        {img && (
+          <div className="gl-vcard-scrim" style={{ position: "absolute", inset: 0, top: "45%", background: "linear-gradient(to bottom, transparent, rgba(8,8,12,.82))", pointerEvents: "none" }} />
+        )}
+        <div style={{ position: "absolute", bottom: 9, left: 11, right: 11, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 13, fontWeight: 700, letterSpacing: ".03em", color: "#fff" }}>{plate ?? "no plate"}</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,.85)" }}>{pct(primary.confidence)}</span>
+        </div>
+
+        {/* hover CTA */}
+        <div className="gl-vcard-cta" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(10,10,14,.32)" }}>
+          <span style={{ fontFamily: FONT.body, fontSize: 12.5, fontWeight: 600, color: "#18181B", background: "#fff", padding: "9px 16px", borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 6, boxShadow: "0 8px 20px -8px rgba(0,0,0,.4)" }}>
+            View evidence
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#18181B" strokeWidth="2.4"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </span>
+        </div>
+      </div>
+
+      {/* body */}
+      <div style={{ padding: "12px 14px 13px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontFamily: FONT.mono, fontSize: 10.5, color: "#9CA3AF" }}>{vioCode(primary.id)}</span>
+          <span style={{ fontFamily: FONT.mono, fontSize: 10.5, color: "#9CA3AF" }}>{timeAgo(primary.detected_at)}</span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 7, fontSize: 12.5, color: "#52525B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ flex: "none" }}><path d="M12 22s7-7.58 7-12.5A7 7 0 0 0 5 9.5C5 14.42 12 22 12 22z" /><circle cx="12" cy="9.5" r="2.5" /></svg>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{location}</span>
+          <span style={{ color: "#D4D4D8", flex: "none" }}>·</span>
+          <span style={{ flex: "none" }}>{lighting}</span>
+        </div>
+
+        {/* every violation flagged on this frame */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+          {visible.map((v) => {
+            const vcol = SEVERITY_COLOR[severityFor(v.violation_type)];
+            return (
+              <span key={v.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: FONT.body, fontSize: 11, fontWeight: 500, color: "#3F3F46", background: "#FAFAFA", border: "1px solid #F0F0F0", padding: "3px 8px 3px 6px", borderRadius: 7 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: vcol.c, flex: "none" }} />
+                {VIOLATION_LABELS[v.violation_type]}
+                <span style={{ fontFamily: FONT.mono, color: "#9CA3AF" }}>{pct(v.confidence)}</span>
+              </span>
+            );
+          })}
+          {overflow > 0 && (
+            <span style={{ display: "inline-flex", alignItems: "center", fontFamily: FONT.mono, fontSize: 11, fontWeight: 600, color: "#9CA3AF", padding: "3px 7px" }}>+{overflow} more</span>
+          )}
+        </div>
+
+        <div style={{ marginTop: 10, height: 4, background: "#F4F4F5", borderRadius: 99, overflow: "hidden" }}>
+          <motion.div
+            initial={{ width: 0 }}
+            whileInView={{ width: `${(primary.confidence ?? 0) * 100}%` }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: (index % 8) * 0.045 + 0.15, ease: [0.16, 1, 0.3, 1] }}
+            style={{ height: "100%", borderRadius: 99, background: col.c }}
+          />
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -298,28 +429,36 @@ function DetailScreen({ v, siblings, onBack, onChanged }: { v: VRow; siblings: V
   return (
     <div style={{ padding: "30px 36px 60px", maxWidth: 1240, margin: "0 auto" }}>
       {/* header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontFamily: FONT.body }}>
-            <span onClick={onBack} style={{ color: "#9CA3AF", cursor: "pointer" }}>Violations</span>
-            <span style={{ color: "#D4D4D8" }}>/</span>
-            <span style={{ fontFamily: FONT.mono, color: "#18181B", fontWeight: 600 }}>#{vioCode(v.id)}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
-            <h1 style={{ fontFamily: FONT.sans, fontSize: 23, fontWeight: 600, letterSpacing: "-0.02em", margin: 0 }}>{VIOLATION_LABELS[v.violation_type]}</h1>
-            <span style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: st.c, background: st.b, padding: "4px 11px", borderRadius: 99, border: `1px solid ${st.c}28` }}>{st.label} review</span>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <motion.button
+            whileHover={{ x: -2 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={onBack}
+            aria-label="Back to violations"
+            style={{ width: 36, height: 36, flex: "none", marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, border: "1px solid #ECECEC", background: "#fff", cursor: "pointer" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52525B" strokeWidth="2.2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+          </motion.button>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontFamily: FONT.body }}>
+              <span onClick={onBack} style={{ color: "#9CA3AF", cursor: "pointer" }}>Violations</span>
+              <span style={{ color: "#D4D4D8" }}>/</span>
+              <span style={{ fontFamily: FONT.mono, color: "#18181B", fontWeight: 600 }}>#{vioCode(v.id)}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+              <h1 style={{ fontFamily: FONT.sans, fontSize: 23, fontWeight: 600, letterSpacing: "-0.02em", margin: 0 }}>{VIOLATION_LABELS[v.violation_type]}</h1>
+              <span style={{ fontFamily: FONT.body, fontSize: 11, fontWeight: 700, color: st.c, background: st.b, padding: "4px 11px", borderRadius: 99, border: `1px solid ${st.c}28` }}>{st.label} review</span>
+            </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 9 }}>
-          {v.status === "pending" && (
-            <>
-              <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} disabled={busy} onClick={() => act("confirm")} style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#fff", background: "#4F46E5", border: "none", padding: "10px 16px", borderRadius: 11, cursor: "pointer" }}>Approve &amp; issue notice</motion.button>
-              <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} disabled={busy} onClick={() => act("reject")} style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#18181B", background: "#fff", border: "1px solid #ECECEC", padding: "10px 16px", borderRadius: 11, cursor: "pointer" }}>Dismiss</motion.button>
-              <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} disabled={busy} onClick={() => act("escalate")} style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#F59E0B", background: "#FFFBEB", border: "1px solid #FDE68A", padding: "10px 16px", borderRadius: 11, cursor: "pointer" }}>Flag for re-check</motion.button>
-            </>
-          )}
-          <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} onClick={onBack} style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#52525B", background: "#fff", border: "1px solid #ECECEC", padding: "10px 14px", borderRadius: 11, cursor: "pointer" }}>← Back</motion.button>
-        </div>
+        {v.status === "pending" && (
+          <div style={{ display: "flex", gap: 9 }}>
+            <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} disabled={busy} onClick={() => act("confirm")} style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#fff", background: "#4F46E5", border: "none", padding: "10px 16px", borderRadius: 11, cursor: "pointer" }}>Approve &amp; issue notice</motion.button>
+            <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} disabled={busy} onClick={() => act("reject")} style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#18181B", background: "#fff", border: "1px solid #ECECEC", padding: "10px 16px", borderRadius: 11, cursor: "pointer" }}>Dismiss</motion.button>
+            <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }} disabled={busy} onClick={() => act("escalate")} style={{ fontFamily: FONT.body, fontSize: 13, fontWeight: 600, color: "#F59E0B", background: "#FFFBEB", border: "1px solid #FDE68A", padding: "10px 16px", borderRadius: 11, cursor: "pointer" }}>Flag for re-check</motion.button>
+          </div>
+        )}
       </motion.div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16, alignItems: "start" }}>

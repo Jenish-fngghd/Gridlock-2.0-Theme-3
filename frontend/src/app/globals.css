@@ -184,6 +184,34 @@ body {
   box-shadow: 0 20px 40px -22px rgba(24, 24, 27, 0.28);
 }
 
+/* violation evidence cards (violations page grid) */
+.gl-vcard {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s, border-color 0.3s;
+}
+.gl-vcard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 26px 48px -22px rgba(24, 24, 27, 0.22);
+  border-color: #d8d8e2 !important;
+}
+.gl-vcard-img {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.gl-vcard:hover .gl-vcard-img {
+  transform: scale(1.08);
+}
+.gl-vcard-scrim {
+  transition: opacity 0.35s;
+}
+.gl-vcard-cta {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+.gl-vcard:hover .gl-vcard-cta {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* loading shimmer (kept from prior build, used by skeletons) */
 .shimmer {
   background: #f1f1f3;

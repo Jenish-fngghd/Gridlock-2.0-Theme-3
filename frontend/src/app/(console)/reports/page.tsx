@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -9,6 +10,12 @@ import { VIOLATION_LABELS, pct } from "@/lib/format";
 import { FONT, severityFor, SEVERITY_COLOR, statusMeta } from "@/lib/ui";
 import CountUp from "@/components/CountUp";
 import Reveal from "@/components/Reveal";
+
+// Leaflet touches `window` on import -- must load client-only, after mount.
+const HotspotMap = dynamic(() => import("@/components/HotspotMap"), {
+  ssr: false,
+  loading: () => <div style={{ minHeight: 260, background: "#F4F4F8" }} />,
+});
 
 interface VRow extends Violation {
   cameras?: { name: string; location_name: string | null } | null;
@@ -35,15 +42,6 @@ const VEHICLE_CLASSES = [
 ];
 
 const ZONES = ["Andheri East", "Bandra-Kurla Complex", "Dadar TT Circle", "Powai", "Worli Sea Face", "Chembur Naka"];
-// Deterministic pseudo-coordinates for the hotspot map (Mumbai bbox), keyed by zone name.
-const ZONE_GEO: Record<string, { x: number; y: number }> = {
-  "Andheri East": { x: 32, y: 38 },
-  "Bandra-Kurla Complex": { x: 44, y: 48 },
-  "Dadar TT Circle": { x: 52, y: 58 },
-  "Powai": { x: 62, y: 30 },
-  "Worli Sea Face": { x: 40, y: 70 },
-  "Chembur Naka": { x: 68, y: 60 },
-};
 
 function zoneFor(v: VRow): string {
   const name = v.cameras?.location_name ?? v.cameras?.name ?? "";
@@ -414,32 +412,8 @@ export default function ReportsPage() {
       {/* hotspots */}
       <Reveal delay={0.05}>
         <div data-tour="rep-hotspots" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 0, background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", marginBottom: 14, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
-          <div style={{ position: "relative", background: "linear-gradient(135deg,#F4F4F8,#FAFAFA)", minHeight: 260, borderRight: "1px solid #ECECEC" }}>
-            <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(0,0,0,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.025) 1px,transparent 1px)", backgroundSize: "24px 24px" }} />
-            {hotspots.map((h, i) => {
-              const geo = ZONE_GEO[h.zone] ?? { x: 50, y: 50 };
-              const active = hoverZone === h.zone;
-              return (
-                <motion.div
-                  key={h.zone}
-                  onMouseEnter={() => setHoverZone(h.zone)}
-                  onMouseLeave={() => setHoverZone(null)}
-                  initial={{ opacity: 0, y: -16, scale: 0.6 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ type: "spring", stiffness: 260, damping: 16, delay: i * 0.08 }}
-                  style={{ position: "absolute", left: `${geo.x}%`, top: `${geo.y}%`, transform: "translate(-50%,-100%)", cursor: "pointer", zIndex: active ? 5 : 1 }}
-                >
-                  <div style={{ position: "relative", width: active ? 22 : 16, height: active ? 22 : 16, transition: "all .2s" }}>
-                    <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#4F46E5", opacity: 0.35, animation: "ringpulse 2.2s ease infinite" }} />
-                    <span style={{ position: "absolute", inset: active ? 2 : 3, borderRadius: "50%", background: "#4F46E5", border: "2px solid #fff", boxShadow: "0 2px 6px rgba(79,70,229,.5)" }} />
-                  </div>
-                  {active && (
-                    <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", background: "#18181B", color: "#fff", padding: "5px 9px", borderRadius: 7, fontSize: 11, whiteSpace: "nowrap", fontFamily: FONT.mono }}>{h.zone} · {h.total}</div>
-                  )}
-                </motion.div>
-              );
-            })}
+          <div style={{ position: "relative", minHeight: 260, borderRight: "1px solid #ECECEC" }}>
+            <HotspotMap hotspots={hotspots} hoverZone={hoverZone} setHoverZone={setHoverZone} />
           </div>
           <div>
             <div style={{ padding: "14px 18px", borderBottom: "1px solid #F4F4F5", fontFamily: FONT.sans, fontSize: 14, fontWeight: 600 }}>Hotspots</div>

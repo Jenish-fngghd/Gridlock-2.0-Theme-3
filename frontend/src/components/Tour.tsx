@@ -254,6 +254,16 @@ export default function Tour() {
                     </button>
                   </div>
                 </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 13, paddingTop: 12, borderTop: "1px solid #F4F4F5" }}>
+                  <Kbd>←</Kbd>
+                  <span style={{ fontFamily: FONT.body, fontSize: 11, color: "#9CA3AF" }}>back</span>
+                  <span style={{ width: 1, height: 11, background: "#ECECEC", margin: "0 4px" }} />
+                  <Kbd>→</Kbd>
+                  <span style={{ fontFamily: FONT.body, fontSize: 11, color: "#9CA3AF" }}>forward</span>
+                  <span style={{ width: 1, height: 11, background: "#ECECEC", margin: "0 4px" }} />
+                  <Kbd>Esc</Kbd>
+                  <span style={{ fontFamily: FONT.body, fontSize: 11, color: "#9CA3AF" }}>skip</span>
+                </div>
               </motion.div>
             </motion.div>
           )}
@@ -291,6 +301,14 @@ export default function Tour() {
         </motion.button>
       </div>
     </>
+  );
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <span style={{ fontFamily: FONT.mono, fontSize: 10.5, fontWeight: 600, color: "#52525B", background: "#FAFAFA", border: "1px solid #ECECEC", borderRadius: 5, padding: "2px 6px", minWidth: 17, textAlign: "center", display: "inline-block" }}>
+      {children}
+    </span>
   );
 }
 
