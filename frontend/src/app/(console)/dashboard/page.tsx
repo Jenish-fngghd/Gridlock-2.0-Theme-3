@@ -196,7 +196,7 @@ export default function DashboardPage() {
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10B981", animation: "ringpulse 2s ease infinite" }} />
             <span style={{ fontFamily: FONT.mono, fontSize: 11, color: "#10B981", fontWeight: 600 }}>Live</span>
           </div>
-          <div style={{ display: "flex", background: "#fff", border: "1px solid #ECECEC", borderRadius: 11, padding: 3, position: "relative" }}>
+          <div data-tour="dash-range" style={{ display: "flex", background: "#fff", border: "1px solid #ECECEC", borderRadius: 11, padding: 3, position: "relative" }}>
             {RANGE_OPTS.map(opt => (
               <button
                 key={opt.key}
@@ -214,7 +214,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* ── KPI row ──────────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 13, marginBottom: 14 }}>
+      <div data-tour="dash-kpis" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 13, marginBottom: 14 }}>
         {[
           { label: "Violations", val: kpis.total, sub: kpis.delta != null ? `${kpis.delta >= 0 ? "▲" : "▼"} ${Math.abs(kpis.delta)}% vs prev` : "all time", subColor: kpis.delta != null ? (kpis.delta > 0 ? "#EF4444" : "#10B981") : "#9CA3AF", delay: 0.06 },
           { label: "Images processed", val: rows.length, sub: "in period", subColor: "#9CA3AF", delay: 0.1 },
@@ -246,7 +246,7 @@ export default function DashboardPage() {
 
         {/* Donut */}
         <Reveal delay={0.08}>
-          <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "20px 22px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+          <div data-tour="dash-donut" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "20px 22px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
               <span style={{ fontFamily: FONT.sans, fontSize: 14.5, fontWeight: 600 }}>Violations by type</span>
               <span style={{ fontFamily: FONT.mono, fontSize: 10.5, color: "#9CA3AF" }}>{donut.total} total</span>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
 
         {/* Area chart */}
         <Reveal delay={0.12}>
-          <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "20px 22px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+          <div data-tour="dash-area" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "20px 22px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <span style={{ fontFamily: FONT.sans, fontSize: 14.5, fontWeight: 600 }}>Violations over time</span>
               <span style={{ fontFamily: FONT.mono, fontSize: 10.5, color: "#9CA3AF" }}>{range === "today" ? "by hour" : range === "7d" ? "daily · 7d" : "daily · 30d"}</span>
@@ -375,7 +375,7 @@ export default function DashboardPage() {
 
         {/* Pipeline latency */}
         <Reveal delay={0.18}>
-          <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "20px 22px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+          <div data-tour="dash-pipeline" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "20px 22px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <span style={{ fontFamily: FONT.sans, fontSize: 14.5, fontWeight: 600 }}>Pipeline latency</span>
               <span style={{ fontFamily: FONT.mono, fontSize: 10.5, color: "#9CA3AF" }}>avg per stage · ms</span>
@@ -407,7 +407,7 @@ export default function DashboardPage() {
 
         {/* Live incidents feed */}
         <Reveal delay={0.22}>
-          <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+          <div data-tour="dash-feed" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
             <div style={{ padding: "15px 20px", borderBottom: "1px solid #F4F4F5", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontFamily: FONT.sans, fontSize: 14.5, fontWeight: 600 }}>Live incidents</span>

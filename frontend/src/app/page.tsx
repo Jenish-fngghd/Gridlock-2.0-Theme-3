@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { FONT } from "@/lib/ui";
+import { requestTour } from "@/lib/tourBus";
 import Brand from "@/components/Brand";
 import Reveal from "@/components/Reveal";
 import CountUp from "@/components/CountUp";
@@ -74,13 +75,14 @@ export default function Landing() {
     <div style={{ minHeight: "100vh", background: "#FAFAFA", color: "#18181B", fontFamily: FONT.body }}>
       {/* nav */}
       <div style={{ position: "sticky", top: 0, zIndex: 50, backdropFilter: "blur(14px)", background: "rgba(250,250,250,.78)", borderBottom: "1px solid #ECECEC" }}>
-        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "15px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div data-tour="landing-nav" style={{ maxWidth: 1180, margin: "0 auto", padding: "15px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Brand />
           <div style={{ display: "flex", alignItems: "center", gap: 32, fontSize: 14, color: "#52525B", fontWeight: 500 }}>
             <span className="gl-link" onClick={() => jump("features")}>Features</span>
             <span className="gl-link" onClick={() => jump("workflow")}>Workflow</span>
             <span className="gl-link" onClick={() => jump("stack")}>Stack</span>
             <span className="gl-link" onClick={() => jump("faq")}>FAQ</span>
+            <span className="gl-link" onClick={() => requestTour({ key: "landing", forceShell: false })}>Take the tour</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <span onClick={() => router.push("/dashboard")} style={{ fontSize: 14, fontWeight: 500, color: "#52525B", cursor: "pointer" }}>Sign in</span>
@@ -103,7 +105,7 @@ export default function Landing() {
             Gridlock 2.0 reads any traffic image, flags seven violation classes, reads number plates, and pinpoints every rider, driver and vehicle — with calibrated, auditable evidence.
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 30 }}>
-            <button onClick={() => router.push("/detect")} className="gl-press gl-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 9, fontFamily: FONT.body, fontSize: 15, fontWeight: 600, color: "#fff", border: "none", padding: "13px 22px", borderRadius: 12, cursor: "pointer" }}>
+            <button data-tour="landing-cta" onClick={() => router.push("/detect")} className="gl-press gl-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 9, fontFamily: FONT.body, fontSize: 15, fontWeight: 600, color: "#fff", border: "none", padding: "13px 22px", borderRadius: 12, cursor: "pointer" }}>
               Launch console
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </button>
@@ -170,7 +172,7 @@ export default function Landing() {
           <Reveal delay={0.06}><h2 style={{ fontFamily: FONT.sans, fontSize: 38, fontWeight: 600, letterSpacing: "-0.03em", margin: "10px 0 0" }}>Seven violation classes, read in <span style={serif}>one</span> pass.</h2></Reveal>
           <Reveal delay={0.12}><p style={{ fontSize: 16, color: "#6B7280", lineHeight: 1.55, margin: "14px 0 0" }}>One forward pass over any frame returns every flagged violation — with confidence, plate and location attached. Benchmarked on the public IDD and LISA datasets.</p></Reveal>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+        <div data-tour="landing-features" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
           {FEATURES.map((f, i) => (
             <Reveal key={f.code} delay={i * 0.05}>
               <div className={i % 2 ? "gl-card-rt" : "gl-card-lt"} style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: 22, boxShadow: "0 1px 2px rgba(24,24,27,.04)", transition: "transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s", height: "100%" }}>
@@ -237,7 +239,7 @@ export default function Landing() {
       {/* honest stats strip */}
       <div style={{ maxWidth: 1180, margin: "48px auto 0", padding: "0 32px" }}>
         <Reveal delay={0.05}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0, borderTop: "1px solid #ECECEC", borderBottom: "1px solid #ECECEC", padding: "32px 0" }}>
+          <div data-tour="landing-stats" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0, borderTop: "1px solid #ECECEC", borderBottom: "1px solid #ECECEC", padding: "32px 0" }}>
             {[
               { node: <CountUp end={mapPct ?? 52.2} decimals={1} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "Detection mAP@0.5 (IDD)" },
               { node: <CountUp end={78} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "ANPR exact-match" },
@@ -282,7 +284,7 @@ export default function Landing() {
       {/* demo */}
       <div id="demo" style={{ maxWidth: 1180, margin: "0 auto", padding: "72px 32px 44px" }}>
         <Reveal delay={0.05}>
-          <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 24, overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr", boxShadow: "0 24px 60px -34px rgba(24,24,27,.2)" }}>
+          <div data-tour="landing-demo" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 24, overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr", boxShadow: "0 24px 60px -34px rgba(24,24,27,.2)" }}>
             <div style={{ padding: 44, borderRight: "1px solid #ECECEC" }}>
               <div style={{ fontFamily: FONT.mono, fontSize: 12, letterSpacing: ".1em", color: "#4F46E5", fontWeight: 500 }}>READY WHEN YOU ARE</div>
               <h2 style={{ fontFamily: FONT.sans, fontSize: 34, fontWeight: 600, letterSpacing: "-0.03em", margin: "12px 0 0", lineHeight: 1.1 }}>See Gridlock 2.0 <span style={serif}>live</span>.</h2>

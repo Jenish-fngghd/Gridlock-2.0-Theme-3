@@ -86,17 +86,23 @@ class VLMVerifier:
             # yes/no question, so we force a describe-first step, give explicit licence to answer
             # false, and an out for violations that are impossible for the vehicle type.
             prompt = (
-                "You are a strict traffic-enforcement auditor. A wrongful ticket is costly, so confirm "
-                "a violation ONLY if it is clearly and unambiguously visible. When in doubt, answer false. "
-                "Do NOT assume a violation just because you are asked about one.\n"
-                "Step 1 — describe the main vehicle type and what the people are doing, in one short sentence.\n"
-                f"Step 2 — answer this specific question: {question}\n"
+                "This is an automated road-safety description task on a public traffic-camera photo. "
+                "You are not identifying, naming, or tracking any specific person — only describing "
+                "generic, anonymous road behaviour (e.g. 'rider', 'driver') for a safety statistic. "
+                "Confirm a violation ONLY if it is clearly and unambiguously visible; when in doubt, "
+                "set confirmed to false. Do NOT assume a violation just because you are asked about one.\n"
                 "Hard rules: a two-wheeler / motorcycle / scooter CANNOT have a seatbelt violation (answer "
                 "false). A vehicle stopped or moving at a signal is NOT 'illegal parking' (answer false). "
                 "If a rider is clearly wearing a helmet, the no-helmet answer is false.\n"
                 f"{extra_context}\n"
-                'Respond strict JSON only, no markdown: {"seen": "<one sentence>", '
-                '"confirmed": true/false, "confidence": 0.0-1.0, "caption": "<one short sentence>"}'
+                "Output NOTHING except one JSON object — no prose before or after it, no markdown "
+                "fences — filling in this exact schema (the question to answer is embedded in the "
+                f"'question' field):\n"
+                '{"scene": "<one short sentence: vehicle type and what the people are doing>", '
+                f'"question": "{question}", '
+                '"confirmed": <true or false — your answer to the question field, as a JSON boolean>, '
+                '"confidence": <number 0.0-1.0>, '
+                '"caption": "<one short sentence explaining the confirmed value>"}'
             )
             payload = {
                 "model": self.model,
@@ -119,6 +125,13 @@ class VLMVerifier:
                 return {"model_unavailable": True, "confirmed": None, "vlm_confidence": 0.0,
                         "caption": "", "note": f"NIM HTTP {resp.status_code}: {resp.text[:160]}"}
             content = resp.json()["choices"][0]["message"]["content"]
+            if self._is_refusal(content):
+                # The model sometimes safety-refuses ("I can't identify individuals...") because
+                # the prompt sounds like a personal-identification request. A refusal is NOT a
+                # "no" — treating it as confirmed=False was silently discarding real violations.
+                # Degrade gracefully instead: the underlying model's own band stands.
+                return {"model_unavailable": True, "confirmed": None, "vlm_confidence": 0.0,
+                        "caption": "", "note": f"VLM refused: {content.strip()[:160]}"}
             parsed = self._parse_json_response(content)
             return {"model_unavailable": False,
                     "confirmed": parsed.get("confirmed"),
@@ -129,6 +142,19 @@ class VLMVerifier:
             return {"model_unavailable": True, "confirmed": None, "vlm_confidence": 0.0,
                     "caption": "", "note": f"{type(e).__name__}: {str(e)[:160]}"}
 
+    _REFUSAL_MARKERS = (
+        "i can't assist", "i cannot assist", "i'm sorry", "i am sorry",
+        "cannot identify individuals", "can't identify individuals",
+        "i cannot identify", "i can't identify", "unable to provide",
+        "i can't help", "i cannot help", "i'm not able to", "i am not able to",
+        "cannot comply", "can't comply",
+    )
+
+    @classmethod
+    def _is_refusal(cls, content: str) -> bool:
+        low = content.lower()
+        return any(m in low for m in cls._REFUSAL_MARKERS)
+
     @staticmethod
     def _parse_json_response(content: str) -> dict:
         text = content.strip()
@@ -138,6 +164,14 @@ class VLMVerifier:
                 return json.loads(text[start:end + 1])
             except Exception:
                 pass
+        # No valid JSON — the model answered in free-form prose instead of the requested schema.
+        # Only read an explicit true/false off it; an ambiguous description (no clear verdict) must
+        # NOT default to False, or every off-schema response silently denies a real violation.
         low = text.lower()
-        return {"confirmed": "true" in low and "false" not in low.split("true")[0][-20:],
-                "confidence": 0.5, "caption": text[:200]}
+        if "true" in low and "false" not in low.split("true")[0][-20:]:
+            confirmed = True
+        elif "false" in low:
+            confirmed = False
+        else:
+            confirmed = None  # inconclusive — caller treats this like model_unavailable
+        return {"confirmed": confirmed, "confidence": 0.5, "caption": text[:200]}

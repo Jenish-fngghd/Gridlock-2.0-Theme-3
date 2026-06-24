@@ -76,7 +76,7 @@ export default function Sidebar() {
         padding: "22px 14px",
       }}
     >
-      <Link href="/" style={{ textDecoration: "none", color: "inherit", padding: "4px 8px 22px" }}>
+      <Link href="/" data-tour="sidebar-brand" style={{ textDecoration: "none", color: "inherit", padding: "4px 8px 22px" }}>
         <Brand />
       </Link>
 
@@ -92,6 +92,7 @@ export default function Sidebar() {
         WORKSPACE
       </div>
 
+      <div data-tour="sidebar-nav">
       {ITEMS.map((it) => {
         const active = path === it.href || path.startsWith(it.href + "/");
         return (
@@ -136,6 +137,7 @@ export default function Sidebar() {
           </Link>
         );
       })}
+      </div>
 
       <div
         style={{

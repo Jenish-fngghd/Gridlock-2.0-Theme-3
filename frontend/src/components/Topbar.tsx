@@ -36,6 +36,7 @@ export default function Topbar() {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <div
+          data-tour="topbar-search"
           style={{
             display: "flex",
             alignItems: "center",

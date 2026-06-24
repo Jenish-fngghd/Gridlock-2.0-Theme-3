@@ -255,12 +255,15 @@ class Pipeline:
             return
         for b in r.get("boxes", []):
             x1, y1, x2, y2 = [int(round(v)) for v in b["xyxy"]]
-            # Dedicated heading model with 0 FP on samples -> trust its score (may auto-confirm).
+            # Re-evaluated on a larger, more diverse sample: this model auto-confirmed clear false
+            # positives on multi-vehicle street scenes (busy-road FPs at 0.89/0.92 conf) despite a
+            # clean 2/2+0/7 result on the original tiny hand-picked sample. Cap below auto_confirm
+            # so a human always reviews before any wrong-side challan goes out.
             violations.append({
-                "type": "wrong_side", "confidence": b["confidence"],
+                "type": "wrong_side", "confidence": min(b["confidence"], 0.79),
                 "bbox": [x1, y1, x2 - x1, y2 - y1], "vehicle_bbox": [x1, y1, x2, y2],
                 "evidence_chain": ["roboflow:wrong-way-driving-detection", "class:wrong-side"],
-                "basis": "roboflow wrong-way-driving-detection/2 (dedicated heading model)"})
+                "basis": "roboflow wrong-way-driving-detection/2 (dedicated heading model; review-only)"})
 
     def _collect_wrongside(self, work, all_dets, violations: list[dict]) -> None:
         for d in all_dets:

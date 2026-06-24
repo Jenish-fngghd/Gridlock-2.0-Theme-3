@@ -241,7 +241,7 @@ export default function ReportsPage() {
       </div>
 
       {/* filter chips */}
-      <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+      <div data-tour="rep-controls" style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
         {FILTER_GROUPS.zone.slice(0, 1).map(() => null)}
         <FilterSelect value={zoneFilter} setValue={setZoneFilter} options={FILTER_GROUPS.zone} />
         <FilterSelect value={typeFilter} setValue={setTypeFilter} options={FILTER_GROUPS.type} />
@@ -266,7 +266,7 @@ export default function ReportsPage() {
 
       {/* time series */}
       <Reveal delay={0.05}>
-        <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "20px 22px", marginBottom: 14, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+        <div data-tour="rep-timeseries" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "20px 22px", marginBottom: 14, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
             <span style={{ fontFamily: FONT.sans, fontSize: 14.5, fontWeight: 600 }}>Violations over time · by type</span>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -309,7 +309,7 @@ export default function ReportsPage() {
       </Reveal>
 
       {/* bento breakdowns */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13, marginBottom: 14 }}>
+      <div data-tour="rep-bento" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13, marginBottom: 14 }}>
         {/* donut by type */}
         <Reveal delay={0.05}>
           <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: "20px 22px", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
@@ -413,7 +413,7 @@ export default function ReportsPage() {
 
       {/* hotspots */}
       <Reveal delay={0.05}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 0, background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", marginBottom: 14, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+        <div data-tour="rep-hotspots" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 0, background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", marginBottom: 14, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
           <div style={{ position: "relative", background: "linear-gradient(135deg,#F4F4F8,#FAFAFA)", minHeight: 260, borderRight: "1px solid #ECECEC" }}>
             <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(0,0,0,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.025) 1px,transparent 1px)", backgroundSize: "24px 24px" }} />
             {hotspots.map((h, i) => {
@@ -457,7 +457,7 @@ export default function ReportsPage() {
 
       {/* incidents table */}
       <Reveal delay={0.05}>
-        <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+        <div data-tour="rep-table" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #F4F4F5" }}>
             <span style={{ fontFamily: FONT.sans, fontSize: 14.5, fontWeight: 600 }}>Incidents</span>
             <div style={{ display: "flex", gap: 6 }}>

@@ -16,10 +16,15 @@ from __future__ import annotations
 # the concepts we ask SAM-3 for, in one call. NOTE: SAM-3 does not detect "stop line" (returns
 # nothing on real images), but reliably finds the "crosswalk" — and the stop line sits right at
 # the crosswalk's near edge, so we use the crosswalk as the stop-line reference.
-PROMPTS = ["motorcycle", "person", "helmet", "vehicle", "crosswalk", "traffic light"]
+# NOTE: "person riding motorcycle" (the reference notebook's rider-specific prompt) was tried
+# here to filter out bystanders, but SAM-3 does not ground that compound/relational phrase at all
+# — it returned zero boxes even on an unambiguous 4-rider test image. Reverted to plain "person";
+# bystander filtering is done geometrically instead (see _is_rider below).
+RIDER_PROMPT = "person"
+PROMPTS = ["motorcycle", RIDER_PROMPT, "helmet", "vehicle", "crosswalk", "traffic light"]
 
 # per-concept confidence floors (helmet kept low — small/occluded; lights/lines need to be clear)
-CONF = {"motorcycle": 0.5, "person": 0.5, "helmet": 0.3, "vehicle": 0.5,
+CONF = {"motorcycle": 0.5, RIDER_PROMPT: 0.5, "helmet": 0.3, "vehicle": 0.5,
         "crosswalk": 0.4, "traffic light": 0.4}
 
 
@@ -27,6 +32,27 @@ def _overlap(a, b, expand=15):
     ax1, ay1, ax2, ay2 = a[0] - expand, a[1] - expand, a[2] + expand, a[3] + expand
     bx1, by1, bx2, by2 = b
     return max(ax1, bx1) < min(ax2, bx2) and max(ay1, by1) < min(ay2, by2)
+
+
+def _union_box(boxes):
+    xs1 = [b[0] for b in boxes]; ys1 = [b[1] for b in boxes]
+    xs2 = [b[2] for b in boxes]; ys2 = [b[3] for b in boxes]
+    return [min(xs1), min(ys1), max(xs2), max(ys2)]
+
+
+def _is_rider(person_box, moto_box, x_margin_frac=0.15):
+    """A person counts as ON this motorcycle only if their horizontal center falls within the
+    bike's own x-span (+ a small margin) AND they vertically overlap it. This is stricter than a
+    plain expanded-box overlap, which was also catching pedestrians/bystanders standing next to or
+    behind the bike (e.g. on a sidewalk) — they touch an expanded box but their center is well
+    outside the bike's footprint."""
+    px1, py1, px2, py2 = person_box
+    mx1, my1, mx2, my2 = moto_box
+    pcx = (px1 + px2) / 2
+    margin = (mx2 - mx1) * x_margin_frac
+    if not (mx1 - margin <= pcx <= mx2 + margin):
+        return False
+    return py1 < my2 + 20 and py2 > my1 - 20  # some vertical overlap with the bike (+ small slack)
 
 
 def _light_color(crop_box, img_bgr):
@@ -68,7 +94,7 @@ class SAM3Violations:
             return [d for d in det.get(concept, []) if d["conf"] >= CONF.get(concept, 0.5)]
 
         motos = boxes("motorcycle")
-        persons = boxes("person")
+        riders = boxes(RIDER_PROMPT)
         helmets = boxes("helmet")
         vehicles = boxes("vehicle") or motos  # fall back to motos if 'vehicle' empty
         stoplines = boxes("crosswalk")  # crosswalk near-edge == stop-line position
@@ -76,24 +102,43 @@ class SAM3Violations:
 
         out: list[dict] = []
 
-        # --- triple riding & helmet (per motorcycle) ---
+        # --- triple riding & helmet (per motorcycle, using its associated riders) ---
         for m in motos:
             mb = m["box"]
-            rider_count = sum(_overlap(mb, p["box"]) for p in persons)
-            if rider_count >= 3:
+            riders_on_bike = [r for r in riders if _is_rider(r["box"], mb)]
+            if len(riders_on_bike) >= 3:
+                # The motorcycle's own SAM-3 box is often just the bike frame and can be too tight
+                # to include all riders (e.g. cuts off heads) — the VLM verification step crops to
+                # vehicle_bbox, so a too-tight box shows it fewer people than were actually counted
+                # and it correctly denies what it can't see. Use the union of the bike + every
+                # counted rider so the evidence crop always contains everyone being claimed.
+                union = _union_box([mb] + [r["box"] for r in riders_on_bike])
                 out.append(self._v("triple_riding", mb, min(0.9, m["conf"]),
                                     "sam3: motorcycle + >=3 riders",
-                                    ["sam3:motorcycle", "sam3:person x3", "rule:count>=3"]))
-            # helmet: a motorcycle scene with NO helmet anywhere over its upper body = no-helmet.
-            # Use the top ~45% of the motorcycle box (rider torso+head) and a generous expand —
-            # the tight head sub-box missed close-up riders. A bike with a rider but zero helmets
-            # nearby is the strong signal (helmet-present cleanly separates in eval).
-            x1, y1, x2, y2 = mb
-            upper = [x1, y1, x2, y1 + (y2 - y1) * 0.45]
-            if not any(_overlap(upper, h["box"], expand=20) for h in helmets):
-                out.append(self._v("no_helmet", mb, min(0.8, m["conf"]),
-                                    "sam3: motorcycle with no helmet over the rider",
-                                    ["sam3:motorcycle", "sam3:helmet absent over rider"]))
+                                    ["sam3:motorcycle", "sam3:person x3 (on-bike)",
+                                     "rule:count>=3"], vehicle_box=union))
+            # helmet: check each ACTUAL RIDER's own head region (top ~35% of THEIR box), not a
+            # region derived from the motorcycle's box. The motorcycle mask from SAM-3 is often
+            # just the vehicle frame and doesn't extend up to head height, so deriving "head
+            # region" from it was structurally wrong and flagged riders wearing visible helmets.
+            # Using the rider's own (person) box fixes this — it reliably includes their head.
+            no_helmet_riders = []
+            for r in riders_on_bike:
+                rx1, ry1, rx2, ry2 = r["box"]
+                head = [rx1, ry1, rx2, ry1 + (ry2 - ry1) * 0.35]
+                if not any(_overlap(head, h["box"], expand=15) for h in helmets):
+                    no_helmet_riders.append(r)
+            if no_helmet_riders:
+                # one violation per bike (not per rider) to avoid duplicate near-identical boxes.
+                # bbox = the rider's own box (accurate for the on-screen marker); vehicle_bbox =
+                # union of bike + that rider (same tight-crop fix as triple_riding above — the
+                # VLM verification step crops to vehicle_bbox, so it must actually contain the
+                # rider's head, not just whatever the motorcycle's own mask happened to cover).
+                worst = max(no_helmet_riders, key=lambda r: r["conf"])
+                out.append(self._v("no_helmet", worst["box"], min(0.8, worst["conf"]),
+                                    "sam3: rider with no helmet over their own head region",
+                                    ["sam3:person (on-bike)", "sam3:helmet absent over rider head"],
+                                    vehicle_box=_union_box([mb, worst["box"]])))
 
         # --- red-light / stop-line (CONNECTED — single-image only) ---
         # A vehicle merely "past the crosswalk" fires on almost every intersection photo (no
@@ -118,8 +163,9 @@ class SAM3Violations:
     _REVIEW_CAP = 0.79
 
     @staticmethod
-    def _v(vtype, box, conf, basis, chain):
+    def _v(vtype, box, conf, basis, chain, vehicle_box=None):
         x1, y1, x2, y2 = [int(round(c)) for c in box]
+        vx1, vy1, vx2, vy2 = [int(round(c)) for c in (vehicle_box or box)]
         return {"type": vtype, "confidence": round(min(float(conf), SAM3Violations._REVIEW_CAP), 3),
-                "bbox": [x1, y1, x2 - x1, y2 - y1], "vehicle_bbox": [x1, y1, x2, y2],
+                "bbox": [x1, y1, x2 - x1, y2 - y1], "vehicle_bbox": [vx1, vy1, vx2, vy2],
                 "evidence_chain": chain, "basis": basis}

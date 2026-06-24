@@ -133,13 +133,13 @@ export default function ViolationsPage() {
             <span style={{ fontFamily: FONT.mono, color: "#18181B", fontWeight: 600 }}>{rows.length}</span> records · {pending} pending review
           </p>
         </div>
-        <button onClick={exportCsv} className="gl-press" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: FONT.body, fontSize: 13.5, fontWeight: 600, color: "#fff", background: "#18181B", border: "none", padding: "10px 16px", borderRadius: 11, cursor: "pointer" }}>
+        <button data-tour="viol-export" onClick={exportCsv} className="gl-press" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: FONT.body, fontSize: 13.5, fontWeight: 600, color: "#fff", background: "#18181B", border: "none", padding: "10px 16px", borderRadius: 11, cursor: "pointer" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>Export CSV
         </button>
       </div>
 
       {/* toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 22, animation: "bfu .55s cubic-bezier(.16,1,.3,1) both", animationDelay: ".06s" }}>
+      <div data-tour="viol-toolbar" style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 22, animation: "bfu .55s cubic-bezier(.16,1,.3,1) both", animationDelay: ".06s" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #ECECEC", borderRadius: 11, padding: "9px 13px", flex: 1 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4-4" /></svg>
           <input
@@ -169,7 +169,7 @@ export default function ViolationsPage() {
       </div>
 
       {/* table */}
-      <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", marginTop: 16, boxShadow: "0 1px 2px rgba(24,24,27,.04)", animation: "bfu .6s cubic-bezier(.16,1,.3,1) both", animationDelay: ".12s" }}>
+      <div data-tour="viol-table" style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", marginTop: 16, boxShadow: "0 1px 2px rgba(24,24,27,.04)", animation: "bfu .6s cubic-bezier(.16,1,.3,1) both", animationDelay: ".12s" }}>
         <div style={{ display: "grid", gridTemplateColumns: COLS, padding: "12px 20px", borderBottom: "1px solid #ECECEC", fontFamily: FONT.mono, fontSize: 10.5, letterSpacing: ".06em", color: "#9CA3AF", background: "#FCFCFC" }}>
           <span>ID</span><span>VIOLATION</span><span>PLATE</span><span>LOCATION</span><span>CONF</span><span>SEVERITY</span><span>STATUS</span>
         </div>

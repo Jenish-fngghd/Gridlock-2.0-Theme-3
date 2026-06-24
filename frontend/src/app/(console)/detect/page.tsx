@@ -122,6 +122,7 @@ export default function DetectPage() {
             </p>
 
             <div
+              data-tour="detect-dropzone"
               onClick={() => inputRef.current?.click()}
               onDrop={onDrop}
               onDragOver={(e) => e.preventDefault()}
@@ -139,7 +140,7 @@ export default function DetectPage() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 18 }}>
-              <button onClick={() => inputRef.current?.click()} className="gl-press" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: FONT.body, fontSize: 13.5, fontWeight: 600, color: "#4F46E5", background: "#EEF0FF", border: "1px solid #E0E2FF", padding: "10px 18px", borderRadius: 11, cursor: "pointer" }}>
+              <button data-tour="detect-browse" onClick={() => inputRef.current?.click()} className="gl-press" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: FONT.body, fontSize: 13.5, fontWeight: 600, color: "#4F46E5", background: "#EEF0FF", border: "1px solid #E0E2FF", padding: "10px 18px", borderRadius: 11, cursor: "pointer" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="#4F46E5"><path d="M8 5v14l11-7z" /></svg>Browse a frame
               </button>
               <span style={{ fontFamily: FONT.mono, fontSize: 11.5, color: "#9CA3AF" }}>runs the full 7-stage pipeline on AWS</span>
