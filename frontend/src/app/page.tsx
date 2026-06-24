@@ -46,6 +46,11 @@ const CHIPS = [
   "Confidence Cascade", "VLM Verification", "Retinexformer Restore", "Realtime Console",
 ];
 
+// Curated wrong-side violation used as the hero image. The env var lets us rotate it without a
+// code push; the hardcoded fallback ensures the right frame shows even when the var isn't set
+// (Vercel preview builds, local dev without .env.local). Never falls through to "most recent".
+const PINNED_HERO_JOB_ID = process.env.NEXT_PUBLIC_HERO_JOB_ID ?? "35c4c7ff-5160-41e3-a9c1-c659ab397b87";
+
 const FAQ = [
   { q: "How accurate is the violation detection?", a: "On a held-out benchmark of 5,000 IDD images the detector reaches mAP@0.5 ≈ 0.59 — RF-DETR for live inference, with SAM-3 used offline to auto-label rare classes (autorickshaw, vehicle-fallback) so the detector sees more of them in training. Every detection still carries a per-class confidence so reviewers can set their own thresholds. We report honest, benchmarked numbers — never a headline figure we can't reproduce." },
   { q: "Which violations can it flag in a single pass?", a: "Seven classes — no-helmet, triple-riding, no-seatbelt, wrong-side, stop-line, red-light and illegal-parking — plus number-plate OCR and per-subject evidence for every flagged vehicle, rider and driver." },
@@ -79,21 +84,16 @@ export default function Landing() {
       });
   }, []);
 
-  // Hero visual: pins a specific curated violation via NEXT_PUBLIC_HERO_JOB_ID when set (picking
-  // "most recent" otherwise tends to surface whatever was last pushed through for debugging,
-  // not a presentable example) — falls back to most-recent-real, then to the static mockup
-  // below if nothing's been processed yet (cold-start / dev environments).
   useEffect(() => {
     (async () => {
-      const pinnedJobId = process.env.NEXT_PUBLIC_HERO_JOB_ID;
-      let query = supabase
+      const pinnedJobId = PINNED_HERO_JOB_ID;
+      const query = supabase
         .from("violations")
         .select("job_id, status, detected_at, annotated_image_path, cameras(name, location_name)")
-        .not("annotated_image_path", "is", null);
-      query = pinnedJobId
-        ? query.eq("job_id", pinnedJobId)
-        : query.order("detected_at", { ascending: false });
+        .not("annotated_image_path", "is", null)
+        .eq("job_id", pinnedJobId);
       const { data: vRows } = await query.limit(1);
+
       const row = vRows?.[0] as {
         job_id: string; status: string; detected_at: string; annotated_image_path: string;
         cameras: { name: string; location_name: string | null } | null;
