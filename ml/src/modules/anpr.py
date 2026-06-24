@@ -117,9 +117,27 @@ def merge_text_regions(regions: list) -> tuple[str, float]:
         ys = [p[1] for p in bbox]
         xs = [p[0] for p in bbox]
         items.append({"text": text, "conf": float(conf), "y": min(ys), "x": min(xs),
-                      "h": max(ys) - min(ys)})
+                      "x2": max(xs), "h": max(ys) - min(ys)})
     if not items:
         return "", 0.0
+    # Drop boxes that substantially overlap an already-kept, higher-confidence box -- a
+    # duplicate/partial re-read of the same text (a detector artifact on a noisy/reflective
+    # crop), not a second group of characters. Naive concatenation of both is exactly how a
+    # 10-char plate turns into 13+ chars of "overprediction".
+    items.sort(key=lambda r: -r["conf"])
+    kept: list[dict] = []
+    for it in items:
+        dup = False
+        for k in kept:
+            overlap = max(0.0, min(it["x2"], k["x2"]) - max(it["x"], k["x"]))
+            narrower = min(it["x2"] - it["x"], k["x2"] - k["x"])
+            same_row = abs(it["y"] - k["y"]) <= 0.6 * (it["h"] or 1)
+            if same_row and narrower > 0 and overlap / narrower > 0.5:
+                dup = True
+                break
+        if not dup:
+            kept.append(it)
+    items = kept
     items.sort(key=lambda r: (r["y"], r["x"]))
     heights = sorted(r["h"] for r in items)
     med_h = heights[len(heights) // 2] or 1.0
@@ -221,6 +239,36 @@ def tight_crop_to_text(arr):
 # ─── ANPR Module ────────────────────────────────────────────────────────────
 
 _TROCR_FT_PATH = Path(__file__).resolve().parents[2] / "checkpoints" / "anpr" / "trocr_ft"
+
+
+def _materialize_meta_buffers(model) -> None:
+    """Newer transformers can leave TrOCR's positional-embedding reference buffer on the meta
+    device (it's never part of any checkpoint's state dict, so low_cpu_mem_usage=False alone
+    doesn't always materialize it -- confirmed still crashing on 5.12.x). It's only ever used as
+    a dtype/device reference (model code does `.to(other_tensor.device)` on it), so replacing it
+    with zeros is safe. Without this, the first forward pass raises "Cannot copy out of meta
+    tensor; no data!" -- same issue hit during trocr_ft training, fixed there the same way."""
+    import torch
+    for name, buf in list(model.named_buffers()):
+        if not buf.is_meta:
+            continue
+        *parents, leaf = name.split(".")
+        owner = model
+        for p in parents:
+            owner = getattr(owner, p)
+        old = getattr(owner, leaf)
+        owner.register_buffer(leaf, torch.zeros(old.shape, dtype=old.dtype))
+
+    # TrOCR's sinusoidal positional embedding keeps its weight tensor as a plain attribute
+    # (`self.weights = self.get_embedding(...)` in __init__, not a registered buffer/parameter),
+    # so it's invisible to named_buffers() above and the checkpoint loader never touches it. If
+    # __init__ ran under from_pretrained's meta-device fast-init context, that attribute is a meta
+    # tensor forever, regardless of low_cpu_mem_usage. get_embedding is a pure function of shape
+    # (sinusoidal, no learned data), so just re-running it on the real device fixes it.
+    for mod in model.modules():
+        w = getattr(mod, "weights", None)
+        if isinstance(w, torch.Tensor) and w.is_meta and hasattr(mod, "get_embedding"):
+            mod.weights = mod.get_embedding(w.shape[0], mod.embedding_dim, mod.padding_idx)
 
 
 class ANPRModule:
@@ -337,7 +385,8 @@ class ANPRModule:
             except Exception:
                 gpu = False
             proc = TrOCRProcessor.from_pretrained(hf_id)
-            mdl = VisionEncoderDecoderModel.from_pretrained(hf_id)
+            mdl = VisionEncoderDecoderModel.from_pretrained(hf_id, low_cpu_mem_usage=False)
+            _materialize_meta_buffers(mdl)
             if gpu:
                 mdl = mdl.cuda()
             mdl.eval()
@@ -354,7 +403,8 @@ class ANPRModule:
             except Exception:
                 gpu = False
             proc = TrOCRProcessor.from_pretrained(str(ckpt))
-            mdl = VisionEncoderDecoderModel.from_pretrained(str(ckpt))
+            mdl = VisionEncoderDecoderModel.from_pretrained(str(ckpt), low_cpu_mem_usage=False)
+            _materialize_meta_buffers(mdl)
             if gpu:
                 mdl = mdl.cuda()
             mdl.eval()
@@ -539,9 +589,29 @@ class ANPRModule:
                 prev = cur
             return prev[-1]
 
+        # A view that found nothing is an abstention, not a vote for "blank plate" -- don't let
+        # it sit in the same pool as real readings (it would otherwise just average everything
+        # toward agreeing-with-nothing). Only fall back to it if every view came up empty.
+        nonempty = [t for t in texts if t[0]]
+        if not nonempty:
+            return texts[0]
+
         # Prefer format-valid result; among ties, pick lowest total Lev distance
-        valid_texts = [t for t in texts if validate_indian(t[0])["format_valid"]]
-        pool = valid_texts if valid_texts else texts
+        valid_texts = [t for t in nonempty if validate_indian(t[0])["format_valid"]]
+        pool = valid_texts if valid_texts else nonempty
+        if not valid_texts:
+            # No view produced a plate-shaped string -- before trusting any of them, require
+            # that at least one other view came close. A reading that's idiosyncratic to a
+            # single rotated/filtered view (no other view agrees, even loosely) is far more
+            # likely an artifact of that specific augmentation than the actual plate text; this
+            # is exactly how a blurry crop the base view correctly found nothing on turns into a
+            # confidently-reported, overpredicted garbage string. Prefer abstaining over that.
+            def agreement(t):
+                return sum(1 for t2 in texts if t2[0] and lev(t[0], t2[0]) <= max(2, len(t[0]) // 4))
+            supported = [t for t in pool if agreement(t) >= 2]
+            pool = supported if supported else []
+            if not pool:
+                return "", 0.0
         best_t, best_c = pool[0]
         best_score = sum(lev(pool[0][0], t[0]) for t in pool)
         for t, c in pool[1:]:
@@ -652,8 +722,11 @@ class ANPRModule:
         pix = proc(images=pil, return_tensors="pt").pixel_values
         if gpu:
             pix = pix.cuda()
+        # Indian plates top out around 10-12 chars (BH-series longest); 32 tokens of headroom
+        # let the decoder run past the actual plate and hallucinate extra digits/letters on a
+        # noisy crop instead of stopping. 16 is generous over the real max while curbing that.
         with torch.no_grad():
-            ids = mdl.generate(pix, max_new_tokens=32)
+            ids = mdl.generate(pix, max_new_tokens=16)
         txt = proc.batch_decode(ids, skip_special_tokens=True)[0]
         return txt, 0.5
 

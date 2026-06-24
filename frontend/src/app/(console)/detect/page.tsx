@@ -322,23 +322,9 @@ export default function DetectPage() {
 
               {isResult && result && (
                 <div style={{ animation: "bfl .6s cubic-bezier(.16,1,.3,1) both" }}>
-                  {/* plate OCR */}
-                  <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: 16, boxShadow: "0 1px 2px rgba(24,24,27,.04)", animation: "springpop .6s cubic-bezier(.16,1,.3,1) both" }}>
-                    <div style={{ fontFamily: FONT.mono, fontSize: 10.5, letterSpacing: ".08em", color: "#9CA3AF", marginBottom: 11 }}>PLATE OCR · TrOCR</div>
-                    <div style={{ position: "relative", borderRadius: 11, overflow: "hidden", background: "#fff", border: "1px solid #E4E4E7", padding: "14px 12px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 1px 4px rgba(0,0,0,.06)" }}>
-                      <span style={{ position: "relative", fontFamily: FONT.mono, fontSize: 25, fontWeight: 600, letterSpacing: ".07em", color: plate ? "#18181B" : "#9CA3AF" }}>
-                        {plate?.plate_text ?? "no plate read"}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 11, fontFamily: FONT.mono, fontSize: 11, color: "#6B7280" }}>
-                      <span>STATE <span style={{ color: "#18181B", fontWeight: 600 }}>{plate?.state_code ?? "—"}</span></span>
-                      <span>OBJECTS <span style={{ color: "#10B981", fontWeight: 600 }}>{objCount}</span></span>
-                    </div>
-                  </div>
-
                   {/* real pipeline stages recap */}
                   {result.stages.length > 0 && (
-                    <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", marginTop: 14, boxShadow: "0 1px 2px rgba(24,24,27,.04)" }}>
+                    <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 2px rgba(24,24,27,.04)" }}>
                       <div style={{ padding: "12px 16px", borderBottom: "1px solid #F4F4F5", fontFamily: FONT.mono, fontSize: 10.5, letterSpacing: ".08em", color: "#9CA3AF" }}>PIPELINE STAGES</div>
                       {result.stages.map((s, i) => (
                         <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderBottom: i < result.stages.length - 1 ? "1px solid #F4F4F5" : "none" }}>
@@ -378,6 +364,20 @@ export default function DetectPage() {
                         );
                       })
                     )}
+                  </div>
+
+                  {/* plate OCR */}
+                  <div style={{ background: "#fff", border: "1px solid #ECECEC", borderRadius: 16, padding: 16, marginTop: 14, boxShadow: "0 1px 2px rgba(24,24,27,.04)", animation: "springpop .6s cubic-bezier(.16,1,.3,1) both" }}>
+                    <div style={{ fontFamily: FONT.mono, fontSize: 10.5, letterSpacing: ".08em", color: "#9CA3AF", marginBottom: 11 }}>PLATE OCR · TrOCR</div>
+                    <div style={{ position: "relative", borderRadius: 11, overflow: "hidden", background: "#fff", border: "1px solid #E4E4E7", padding: "14px 12px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 1px 4px rgba(0,0,0,.06)" }}>
+                      <span style={{ position: "relative", fontFamily: FONT.mono, fontSize: 25, fontWeight: 600, letterSpacing: ".07em", color: plate ? "#18181B" : "#9CA3AF" }}>
+                        {plate?.plate_text ?? "no plate read"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 11, fontFamily: FONT.mono, fontSize: 11, color: "#6B7280" }}>
+                      <span>STATE <span style={{ color: "#18181B", fontWeight: 600 }}>{plate?.state_code ?? "—"}</span></span>
+                      <span>OBJECTS <span style={{ color: "#10B981", fontWeight: 600 }}>{objCount}</span></span>
+                    </div>
                   </div>
 
                   <div style={{ display: "flex", gap: 10, marginTop: 14 }}>

@@ -192,6 +192,21 @@ def train(model_size: str = "base", epochs: int = 30, batch: int = 8,
     if _meta_buffers:
         log(f"[train_anpr] materialized {len(_meta_buffers)} meta buffer(s): {_meta_buffers}")
 
+    # The actual recurring culprit: TrOCR's sinusoidal positional embedding keeps its weight
+    # tensor as a plain attribute (`self.weights = self.get_embedding(...)` in __init__), not a
+    # registered buffer/parameter -- invisible to named_buffers() above, so the sweep never
+    # touches it. If __init__ ran under from_pretrained's meta-device fast-init context, it's a
+    # meta tensor forever. get_embedding is a pure function of shape (sinusoidal, no learned
+    # data), so just re-running it on the real device fixes it.
+    _meta_pos_embeds = []
+    for mod in model.modules():
+        w = getattr(mod, "weights", None)
+        if isinstance(w, torch.Tensor) and w.is_meta and hasattr(mod, "get_embedding"):
+            mod.weights = mod.get_embedding(w.shape[0], mod.embedding_dim, mod.padding_idx)
+            _meta_pos_embeds.append(type(mod).__name__)
+    if _meta_pos_embeds:
+        log(f"[train_anpr] re-materialized meta positional embedding(s): {_meta_pos_embeds}")
+
     # Configure seq2seq decoding tokens
     model.config.decoder_start_token_id = proc.tokenizer.cls_token_id
     model.config.pad_token_id           = proc.tokenizer.pad_token_id
