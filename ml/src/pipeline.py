@@ -25,7 +25,7 @@ from pathlib import Path
 
 from src.modules.anpr import ANPRModule
 from src.modules.confidence_cascade import ConfidenceCascade
-from src.modules.detection import VehicleDetector
+from src.modules.detection import Detection, VehicleDetector
 from src.modules.evidence import EvidenceGenerator
 from src.modules.geometry_engine import GeometryEngine, SceneConfig
 from src.modules.helmet_triple import HelmetTripleModule
@@ -39,7 +39,7 @@ from src.modules.wrongside import WrongSideModule
 from src.utils.logging import REPO_ROOT, log, new_run_id
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp"}
-VEHICLE_CLASSES = {"car", "truck", "bus", "motorcycle"}
+VEHICLE_CLASSES = {"car", "truck", "bus", "motorcycle", "autorickshaw"}
 FOUR_WHEELERS = {"car", "truck", "bus"}  # seatbelt only applies to these (not two-wheelers)
 
 SAMPLE_CAMERA_CONFIG = {
@@ -135,27 +135,39 @@ class Pipeline:
         pre = self.pre.restore(img, q)
         work = pre.image if pre.image is not None else img
 
-        det = self.detector.detect(work)
-        all_dets = det.detections if not det.model_unavailable else []
-
         seatbelt = self.seatbelt.analyze(work)
-        signal_obs = self._observe_signal(work, all_dets)
+
+        violations: list[dict] = []
+        ht: dict = {}
+        all_dets: list = []
+        detector_unavailable = False
+
+        if self.sam3v is not None and self.sam3v.available():
+            # Primary path: one SAM-3 call covers both detection and all violation rules.
+            # SAM-3 is open-vocab so it detects Indian-specific classes (autorickshaw) that
+            # COCO-trained RF-DETR structurally misses. RF-DETR not called on this path.
+            sam3_result = self.sam3v.analyze(work)
+            violations.extend(sam3_result["violations"])
+            for sd in sam3_result["detections"]:
+                all_dets.append(Detection(
+                    xyxy=tuple(sd["xyxy"]),
+                    confidence=sd["confidence"],
+                    class_id=-1,
+                    class_name=sd["class_name"],
+                ))
+        else:
+            # Fallback path: all SAM-3 keys exhausted — run local RF-DETR + rule-based detection.
+            det = self.detector.detect(work)
+            all_dets = det.detections if not det.model_unavailable else []
+            detector_unavailable = det.model_unavailable
+            ht = self.helmet_triple.analyze(detections=all_dets, frame=work)
+            self._collect_triple(ht, violations)
+            self._collect_helmet(ht, violations)
 
         # single still -> temporal/geometry abstains (no track history)
         geo_note = "abstained: single still has no motion history (needs sequence; see process_clip)"
 
-        violations: list[dict] = []
-        ht: dict = {}
-        # helmet, triple-riding, stop-line, red-light: SAM-3 entity detection + geometric rules
-        # (one hosted call; see sam3_violations.py). Falls back to the RF-DETR helmet/triple proxy
-        # only if SAM-3 is unavailable. Seatbelt (trained 2-stage) and wrong-side (trained) stay
-        # local — seatbelt already performs well.
-        if self.sam3v is not None and self.sam3v.available():
-            violations.extend(self.sam3v.analyze(work))
-        else:
-            ht = self.helmet_triple.analyze(detections=all_dets, frame=work)
-            self._collect_triple(ht, violations)
-            self._collect_helmet(ht, violations)
+        signal_obs = self._observe_signal(work, all_dets)
         self._collect_seatbelt(seatbelt, all_dets, violations)
         # wrong-side: dedicated Roboflow heading model (2/2+0/7) when available, else weak local.
         if self.rf_wrongside is not None:
@@ -189,7 +201,7 @@ class Pipeline:
             "detections": len(all_dets),
             "detection_list": [{"class_name": d.class_name, "confidence": round(d.confidence, 4),
                                 "xyxy": [round(v, 1) for v in d.xyxy]} for d in all_dets],
-            "detector_unavailable": det.model_unavailable,
+            "detector_unavailable": detector_unavailable,
             "helmet_status": ht.get("helmet_status", "not_testable"),
             "triple_riding_count": ht.get("triple_riding_count", 0),
             "seatbelt": seatbelt.get("windshields", []),

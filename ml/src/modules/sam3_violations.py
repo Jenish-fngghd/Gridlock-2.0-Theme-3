@@ -21,11 +21,20 @@ from __future__ import annotations
 # — it returned zero boxes even on an unambiguous 4-rider test image. Reverted to plain "person";
 # bystander filtering is done geometrically instead (see _is_rider below).
 RIDER_PROMPT = "person"
-PROMPTS = ["motorcycle", RIDER_PROMPT, "helmet", "vehicle", "crosswalk", "traffic light"]
+PROMPTS = ["motorcycle", RIDER_PROMPT, "helmet", "vehicle", "autorickshaw",
+           "crosswalk", "traffic light"]
 
 # per-concept confidence floors (helmet kept low — small/occluded; lights/lines need to be clear)
 CONF = {"motorcycle": 0.5, RIDER_PROMPT: 0.5, "helmet": 0.3, "vehicle": 0.5,
-        "crosswalk": 0.4, "traffic light": 0.4}
+        "autorickshaw": 0.4, "crosswalk": 0.4, "traffic light": 0.4}
+
+# SAM-3 concepts that map to detection class names (fed back into the main detection list)
+_DET_PROMPTS = {
+    "motorcycle": "motorcycle",
+    "person": "person",
+    "vehicle": "car",
+    "autorickshaw": "autorickshaw",
+}
 
 
 def _overlap(a, b, expand=15):
@@ -81,14 +90,19 @@ class SAM3Violations:
     def available(self) -> bool:
         return self.sam3 is not None and self.sam3.available()
 
-    def analyze(self, img_bgr) -> list[dict]:
-        """Returns a list of violation dicts: {type, box[x1,y1,x2,y2], confidence, basis, chain}."""
+    def analyze(self, img_bgr) -> dict:
+        """Returns {"violations": [...], "detections": [...]}.
+        violations: standard violation dicts {type, confidence, bbox, ...}
+        detections: SAM-3 detected objects merged back into the main detection list —
+                    each is {class_name, xyxy, confidence} matching Detection dataclass fields.
+        """
+        empty = {"violations": [], "detections": []}
         if not self.available():
-            return []
+            return empty
         # one SAM-3 call for all concepts; per-concept threshold filtering applied below
         det = self.sam3.detect_many(img_bgr, PROMPTS, conf=0.3)
         if det.get("_unavailable"):
-            return []
+            return empty
 
         def boxes(concept):
             return [d for d in det.get(concept, []) if d["conf"] >= CONF.get(concept, 0.5)]
@@ -99,6 +113,7 @@ class SAM3Violations:
         vehicles = boxes("vehicle") or motos  # fall back to motos if 'vehicle' empty
         stoplines = boxes("crosswalk")  # crosswalk near-edge == stop-line position
         lights = boxes("traffic light")
+        autorickshaws = boxes("autorickshaw")
 
         out: list[dict] = []
 
@@ -155,7 +170,24 @@ class SAM3Violations:
                     out.append(self._v("red_light", v["box"], min(0.85, v["conf"]),
                                         "sam3: red light (HSV) + vehicle past the crosswalk/stop-line",
                                         ["sam3:traffic light=red", "sam3:crosswalk", "sam3:vehicle past line"]))
-        return out
+        # Build detection list from SAM-3 boxes — deduplicated by class, feeding back
+        # detected objects (motorcycle, person, vehicle, autorickshaw) into the main pipeline.
+        seen: set[tuple] = set()
+        dets: list[dict] = []
+        for prompt, class_name in _DET_PROMPTS.items():
+            src = motos if prompt == "motorcycle" else \
+                  riders if prompt == "person" else \
+                  autorickshaws if prompt == "autorickshaw" else \
+                  boxes("vehicle")
+            for d in src:
+                key = (class_name, round(d["box"][0]), round(d["box"][1]))
+                if key not in seen:
+                    seen.add(key)
+                    dets.append({"class_name": class_name,
+                                 "xyxy": tuple(d["box"]),
+                                 "confidence": d["conf"]})
+
+        return {"violations": out, "detections": dets}
 
     # SAM-3 + geometric rules are heuristic, so they never auto-challan: clamp confidence below
     # every auto_confirm threshold (min is 0.80) so each lands in the human_review band -> the VLM

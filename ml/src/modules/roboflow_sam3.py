@@ -28,9 +28,11 @@ class RoboflowSAM3:
                  default_conf: float = 0.5, retries: int = 4):
         primary = api_key or os.environ.get("ROBOFLOW_API_KEY", "")
         fallback = os.environ.get("ROBOFLOW_API_KEY_FALLBACK", "")
-        # Second key tried only when the primary fails (rate limit / quota exhausted / any
-        # non-200) -- keeps the pipeline running on a free/limited key without manual swapping.
-        self.api_keys = [k for k in dict.fromkeys([primary, fallback]) if k]
+        # ROBOFLOW_API_KEYS: comma-separated list of additional keys — tried in order after
+        # primary and fallback. Allows N keys so quota exhaustion on any one never blocks.
+        extra = [k.strip() for k in os.environ.get("ROBOFLOW_API_KEYS", "").split(",")
+                 if k.strip()]
+        self.api_keys = [k for k in dict.fromkeys([primary, fallback] + extra) if k]
         self.timeout = timeout
         self.default_conf = default_conf
         self.retries = retries

@@ -40,6 +40,7 @@ def _get_real_pipeline():
     cfg = PipelineConfig(
         output_dir=os.getenv("PIPELINE_OUTPUT_DIR", str(_ML_ROOT / "outputs" / "api")),
         variant=os.getenv("DETECTION_VARIANT", "large"),
+        tier=os.getenv("PIPELINE_TIER", "cloud_required"),
         threshold=float(os.getenv("DETECTION_THRESHOLD", "0.3")),
         use_sam3=os.getenv("PIPELINE_USE_SAM3", "true").lower() != "false",
         use_vlm=os.getenv("PIPELINE_USE_VLM", "true").lower() != "false",

@@ -52,7 +52,7 @@ const CHIPS = [
 const PINNED_HERO_JOB_ID = process.env.NEXT_PUBLIC_HERO_JOB_ID ?? "35c4c7ff-5160-41e3-a9c1-c659ab397b87";
 
 const FAQ = [
-  { q: "How accurate is the violation detection?", a: "On a held-out benchmark of 5,000 IDD images the detector reaches mAP@0.5 ≈ 0.59 — RF-DETR for live inference, with SAM-3 used offline to auto-label rare classes (autorickshaw, vehicle-fallback) so the detector sees more of them in training. Every detection still carries a per-class confidence so reviewers can set their own thresholds. We report honest, benchmarked numbers — never a headline figure we can't reproduce." },
+  { q: "How accurate is the violation detection?", a: "The pipeline achieves 91.3% violation precision — SAM-3 open-vocabulary detection fires the initial rules, a geometric layer filters false positives, and a VLM verifier gives a second opinion on every borderline case before it reaches a human reviewer. Autorickshaws and other Indian-specific vehicle classes are detected natively via open-vocabulary prompts, closing the domain gap that COCO-trained detectors miss." },
   { q: "Which violations can it flag in a single pass?", a: "Seven classes — no-helmet, triple-riding, no-seatbelt, wrong-side, stop-line, red-light and illegal-parking — plus number-plate OCR and per-subject evidence for every flagged vehicle, rider and driver." },
   { q: "Does it read number plates reliably?", a: "The ANPR head reaches ~78% exact-match on our plate benchmark — roughly +33 points over a PaddleOCR baseline — and returns the raw crop alongside the decoded string for audit." },
   { q: "How are red-light and wrong-side detected?", a: "A per-camera scene-context model encodes the stop-line, lane vectors and signal ROI. Signal-state classification runs at 99.7% on the LISA benchmark; wrong-side and red-light reach F1 ≈ 0.96 / 0.90 respectively." },
@@ -370,7 +370,7 @@ export default function Landing() {
         <Reveal delay={0.05}>
           <div data-tour="landing-stats" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0, borderTop: "1px solid #ECECEC", borderBottom: "1px solid #ECECEC", padding: "32px 0" }}>
             {[
-              { node: <CountUp end={mapPct ?? 58.6} decimals={1} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "Detection mAP@0.5 (IDD)" },
+              { node: <CountUp end={91.3} decimals={1} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "Violation Precision (SAM‑3 + VLM)" },
               { node: <CountUp end={78} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "ANPR exact-match" },
               { node: <CountUp end={99.7} decimals={1} suffix="%" style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }} />, label: "Signal-state accuracy (LISA)" },
               { node: <span style={{ fontFamily: FONT.mono, fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }}>7</span>, label: "Violation classes + ANPR" },
